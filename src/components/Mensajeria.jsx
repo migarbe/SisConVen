@@ -64,7 +64,7 @@ export default function Mensajeria({ clientes, facturas, tasaCambio, productos =
             texto += `*Total adeudado:* $${formatNumberVE(totalUSD, 2)} USD (${formatBs(totalUSD * (tasaCambio || 0))})\n\n`
             texto += 'Por favor, realice el pago antes de la fecha de vencimiento. Muchas gracias.'
         } else if (tipoMensaje === 'pedido') {
-            const saludo = cliente ? `Cordial saludo estimado ${cliente.nombre},` : `Reciban un cordial y afectuoso saludo, estimados clientes.`
+            const saludo = cliente ? `Saludos ${cliente.nombre},` : `Reciban un cordial y afectuoso saludo, estimados clientes.`
 
             texto += `${saludo}\n\n`
             texto += `Ya estamos recibiendo pedidos. A continuación, les presentamos nuestra lista de productos y precios disponibles para la venta:\n\n`
