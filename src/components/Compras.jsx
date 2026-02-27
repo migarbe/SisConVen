@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { getExchangeRates, convertCurrency } from '../utils/exchangeRateService'
 import { formatBs } from '../utils/formatters'
 import { Box, Typography, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, InputLabel, Select, MenuItem, FormControl, Grid, Alert, Tooltip, Autocomplete } from '@mui/material'
+import RateSource from './RateSource'
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, Save as SaveIcon, Cancel as CancelIcon, Print as PrintIcon, AttachMoney as AttachMoneyIcon } from '@mui/icons-material'
 
 export default function Compras({ compras, setCompras, productos, setProductos, tasaCambio }) {
@@ -271,6 +272,7 @@ export default function Compras({ compras, setCompras, productos, setProductos, 
                 <div>
                     <h1 className="page-title">Compras e Inventario</h1>
                     <p className="page-subtitle">Registra entrada de mercancía y gestiona cuentas por pagar</p>
+                    <RateSource />
                 </div>
                 <button
                     className="btn btn-primary"

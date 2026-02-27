@@ -159,7 +159,7 @@ function App() {
     const [vendedores, setVendedores] = useState([])
     const [pedidos, setPedidos] = useState([])
     const [compras, setCompras] = useState([]) // Estado para compras
-    const [tasaCambio, setTasaCambio] = useState(50) // Tasa por defecto
+    const [tasaCambio, setTasaCambio] = useState(50) // Tasa por defecto (se reemplaza al inicializar con el valor oficial obtenido del BCV JSON o de la API)
     const [brecha, setBrecha] = useState(0) // Brecha adicional del usuario (%)
     const [brechaBase, setBrechaBase] = useState(0) // Brecha del dólar paralelo vs oficial (%)
     const [porcentajeCredito, setPorcentajeCredito] = useState(10) // Porcentaje recargo crédito (%)

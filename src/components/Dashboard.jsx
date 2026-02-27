@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { formatBs } from '../utils/formatters'
-import { fetchExchangeRates, getLastUpdateString, getDollarBrecha, getApiStatus } from '../utils/exchangeRateService'
+import { fetchExchangeRates, getLastUpdateString, getDollarBrecha, getApiStatus, getRateSource, getBcvFechaVigencia } from '../utils/exchangeRateService'
 import { Box, Typography, Grid, Card, CardContent, Chip, Button, LinearProgress, Alert, IconButton, Tooltip } from '@mui/material'
 import { Refresh as RefreshIcon, TrendingUp as TrendingUpIcon, AttachMoney as AttachMoneyIcon, ShoppingCart as ShoppingCartIcon, Info as InfoIcon } from '@mui/icons-material'
 
@@ -9,6 +9,8 @@ export default function Dashboard({ facturas, pagos, tasaCambio, setTasaCambio, 
     const [lastUpdate, setLastUpdate] = useState(getLastUpdateString())
     const [brechaInfo, setBrechaInfo] = useState(null)
     const [loadingBrecha, setLoadingBrecha] = useState(false)
+    const [rateSource, setRateSource] = useState(getRateSource())
+    const [bcvFecha, setBcvFecha] = useState(getBcvFechaVigencia())
     const LOW_STOCK_THRESHOLD = 5 // Kg
     // incluir productos con 0 Kg y los que están por debajo del umbral
     const lowStockList = productos.filter(p => (p.cantidad_kg || 0) < LOW_STOCK_THRESHOLD)
@@ -38,6 +40,13 @@ export default function Dashboard({ facturas, pagos, tasaCambio, setTasaCambio, 
         
         loadBrecha()
         loadApiStatus()
+        // set initial source and fecha if available
+        try {
+            setRateSource(getRateSource())
+            setBcvFecha(getBcvFechaVigencia())
+        } catch (err) {
+            // ignore
+        }
     }, [])
 
     const daysBetween = (from, to) => {
@@ -121,13 +130,14 @@ export default function Dashboard({ facturas, pagos, tasaCambio, setTasaCambio, 
 
     const handleRefreshRates = async () => {
         setRefreshing(true)
-        try {
+            try {
             const rates = await fetchExchangeRates()
             if (rates && rates.VES) {
                 setTasaCambio(rates.VES)
             }
             setLastUpdate(getLastUpdateString())
-            
+                setRateSource(getRateSource())
+                setBcvFecha(getBcvFechaVigencia())
             // Also refresh API status
             try {
                 await getApiStatus()
@@ -164,6 +174,11 @@ export default function Dashboard({ facturas, pagos, tasaCambio, setTasaCambio, 
                             <Typography variant="body2" color="textSecondary">
                                 🕐 Última actualización: {lastUpdate}
                             </Typography>
+                            {(rateSource || bcvFecha) && (
+                                <Typography variant="body2" color="textSecondary">
+                                    {rateSource && (`Fuente: ${rateSource}`)}{rateSource && bcvFecha ? ' • ' : ''}{bcvFecha && (`Fecha vigencia: ${bcvFecha}`)}
+                                </Typography>
+                            )}
                         </Box>
                         <Box display="flex" gap={1}>
                             <Button

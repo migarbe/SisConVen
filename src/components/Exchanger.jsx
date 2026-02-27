@@ -4,7 +4,9 @@ import {
     convertCurrency,
     formatNumber,
     getLastUpdateString,
-    getDollarBrecha
+    getDollarBrecha,
+    getRateSource,
+    getBcvFechaVigencia
 } from '../utils/exchangeRateService'
 import { Box, Typography, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, InputLabel, Select, MenuItem, FormControl, Grid, Alert, Tooltip, Autocomplete } from '@mui/material'
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, Save as SaveIcon, Cancel as CancelIcon, Print as PrintIcon, AttachMoney as AttachMoneyIcon } from '@mui/icons-material'
@@ -34,6 +36,8 @@ export default function Exchanger() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
     const [brechaInfo, setBrechaInfo] = useState(null)
+    const [rateSource, setRateSource] = useState(getRateSource())
+    const [bcvFecha, setBcvFecha] = useState(getBcvFechaVigencia())
 
     // Fetch rates on mount
     useEffect(() => {
@@ -73,6 +77,8 @@ export default function Exchanger() {
             const rates = await fetchExchangeRates()
             setExchangeRates(rates)
             setLastUpdate(getLastUpdateString())
+            setRateSource(getRateSource())
+            setBcvFecha(getBcvFechaVigencia())
         } catch (err) {
             setError('Error al cargar las tasas de cambio. Usando datos en caché.')
             console.error('Error loading rates:', err)
@@ -167,6 +173,14 @@ export default function Exchanger() {
                     <div className="text-small text-muted mt-3" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <span>🕐</span>
                         <span>Última actualización: {lastUpdate || 'Cargando...'}</span>
+                    </div>
+                    {(rateSource || bcvFecha) && (
+                        <div className="text-small text-muted mt-1" style={{ display: 'flex', gap: '0.5rem' }}>
+                            {rateSource && (<span>Fuente: {rateSource}</span>)}
+                            {rateSource && bcvFecha && (<span>•</span>)}
+                            {bcvFecha && (<span>Fecha vigencia: {bcvFecha}</span>)}
+                        </div>
+                    )}
                     </div>
                 </div>
             </div>
