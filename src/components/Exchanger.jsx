@@ -11,19 +11,19 @@ import {
 import { Box, Typography, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, InputLabel, Select, MenuItem, FormControl, Grid, Alert, Tooltip, Autocomplete } from '@mui/material'
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, Save as SaveIcon, Cancel as CancelIcon, Print as PrintIcon, AttachMoney as AttachMoneyIcon } from '@mui/icons-material'
 
+const CURRENCY_FLAGS = {
+    USD: '🇺🇸',
+    EUR: '🇪🇺',
+    COP: '🇨🇴',
+    VES: '🇻🇪'
+}
+
 const CURRENCIES = ['USD', 'COP', 'VES']
 
 const CURRENCY_NAMES = {
     USD: 'Dólar Estadounidense',
     COP: 'Peso Colombiano',
     VES: 'Bolívar Venezolano'
-}
-
-const CURRENCY_FLAGS = {
-    USD: '🇺🇸',
-    EUR: '🇪🇺',
-    COP: '🇨🇴',
-    VES: '🇻🇪'
 }
 
 export default function Exchanger() {
@@ -164,24 +164,20 @@ export default function Exchanger() {
                 </div>
 
                 <div className="card-body">
-                    <div className="rates-grid">
-                        {getRatesGrid()}
-                    </div>
-
-
+                    <div className="rates-grid">{getRatesGrid()}</div>
 
                     <div className="text-small text-muted mt-3" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <span>🕐</span>
                         <span>Última actualización: {lastUpdate || 'Cargando...'}</span>
                     </div>
+
                     {(rateSource || bcvFecha) && (
                         <div className="text-small text-muted mt-1" style={{ display: 'flex', gap: '0.5rem' }}>
-                            {rateSource && (<span>Fuente: {rateSource}</span>)}
-                            {rateSource && bcvFecha && (<span>•</span>)}
-                            {bcvFecha && (<span>Fecha vigencia: {bcvFecha}</span>)}
+                            {rateSource && <span>Fuente: {rateSource}</span>}
+                            {rateSource && bcvFecha && <span>•</span>}
+                            {bcvFecha && <span>Fecha vigencia: {bcvFecha}</span>}
                         </div>
                     )}
-                    </div>
                 </div>
             </div>
 
