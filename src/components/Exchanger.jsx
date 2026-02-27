@@ -13,7 +13,6 @@ import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as Searc
 
 const CURRENCY_FLAGS = {
     USD: '🇺🇸',
-    EUR: '🇪🇺',
     COP: '🇨🇴',
     VES: '🇻🇪'
 }
@@ -323,7 +322,7 @@ export default function Exchanger() {
 
             {/* Footer Info */}
             <div className="text-center text-muted mt-4" style={{ fontSize: '0.875rem' }}>
-                <p>Datos de divisas: DolarAPI (Venezuela)</p>
+                <p>Datos de divisas: DolarAPI y SISCONVEN (Venezuela)</p>
                 <p className="text-small">Las tasas se actualizan automáticamente cada 60 minutos</p>
             </div>
         </div>
