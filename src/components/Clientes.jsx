@@ -3,7 +3,7 @@ import { normalizePhoneVE, formatPhoneForDisplay, formatBs } from '../utils/form
 import { Box, Typography, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, InputLabel, Select, MenuItem, FormControl, Grid, Alert, Tooltip } from '@mui/material'
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, Save as SaveIcon, Cancel as CancelIcon } from '@mui/icons-material'
 
-export default function Clientes({ clientes, setClientes, externalEditCliente, setExternalEditCliente, facturas = [], tasaCambio = 0 }) {
+export default function Clientes({ clientes, setClientes, externalEditCliente, setExternalEditCliente, facturas = [], tasaCambio = 0, diasCredito = 7 }) {
     const [vistaActiva, setVistaActiva] = useState('lista') // 'lista', 'formulario', 'facturas'
     const [editando, setEditando] = useState(null)
     const [formData, setFormData] = useState({
@@ -102,12 +102,13 @@ export default function Clientes({ clientes, setClientes, externalEditCliente, s
 
     const enviarRecordatorio = (factura, cliente) => {
         if (!factura || !cliente) return
+        const creditDays = diasCredito || 7
         const fechaEmi = formatDateDDMMYYYY(factura.fecha)
-        const fechaVenc = formatDateDDMMYYYY(new Date(new Date(factura.fecha).getTime() + 7 * 24 * 60 * 60 * 1000))
+        const fechaVenc = formatDateDDMMYYYY(new Date(new Date(factura.fecha).getTime() + creditDays * 24 * 60 * 60 * 1000))
         const montoUSD = factura.saldo_pendiente_usd || 0
         const montoBS = montoUSD * tasaCambio
 
-        let texto = `Hola ${cliente.nombre}, cordial saludo.\n\n` +
+        let texto = `Hola ${cliente.nombre}, reciba un cordial saludo.\n\n` +
             `Le recordamos que la factura #${factura.id} emitida el ${fechaEmi} y con vencimiento el ${fechaVenc} presenta un saldo pendiente de $${formatNumberVE(montoUSD, 2)} USD (${formatBs(montoBS)}).\n\n` +
             'Por favor proceda con el pago a la brevedad. Muchas gracias.'
 
@@ -324,7 +325,8 @@ export default function Clientes({ clientes, setClientes, externalEditCliente, s
                                     </thead>
                                     <tbody>
                                         {facturasPendientesCliente.map(f => {
-                                            const vencimiento = new Date(new Date(f.fecha).getTime() + 7 * 24 * 60 * 60 * 1000)
+                                            const creditDays = diasCredito || 7
+                                            const vencimiento = new Date(new Date(f.fecha).getTime() + creditDays * 24 * 60 * 60 * 1000)
                                             const estaVencida = vencimiento < new Date()
                                             return (
                                                 <tr key={f.id}>

@@ -32,6 +32,7 @@ export const VARIABLES = {
     'empresa.telefono': 'Teléfono de contacto',
     'empresa.banco': 'Datos bancarios',
     'empresa.direccion': 'Dirección de la empresa',
+    'empresa.dias_credito': 'Días de crédito',
 
     // Fechas
     'fecha_actual': 'Fecha actual',
@@ -45,7 +46,8 @@ const EMPRESA_CONFIG = {
     nombre: 'SISCONVEN 2026',
     telefono: '(0422) 769-3572',
     banco: '0105 - Banco Mercantil C.A.',
-    direccion: 'Dirección Comercial'
+    direccion: 'Dirección Comercial',
+    dias_credito: 7
 }
 
 /**
@@ -73,7 +75,9 @@ export function renderTemplate(template, context = {}) {
     if (context.factura) {
         result = result.replace(/{factura\.id}/g, context.factura.id || '')
         result = result.replace(/{factura\.fecha}/g, formatDate(context.factura.fecha))
-        result = result.replace(/{factura\.vencimiento}/g, formatDate(getVencimiento(context.factura.fecha)))
+        // calcular vencimiento usando los días de crédito si están disponibles
+        const vencDays = (context.empresa && context.empresa.dias_credito) ? context.empresa.dias_credito : 7
+        result = result.replace(/{factura\.vencimiento}/g, formatDate(getVencimiento(context.factura.fecha, vencDays)))
         result = result.replace(/{factura\.saldo}/g, formatCurrency(context.factura.saldo_pendiente_usd || 0))
         result = result.replace(/{factura\.total}/g, formatCurrency(context.factura.total_usd || 0))
         result = result.replace(/{factura\.detalles}/g, getFacturaDetalles(context.factura))
@@ -92,6 +96,12 @@ export function renderTemplate(template, context = {}) {
     result = result.replace(/{empresa\.telefono}/g, EMPRESA_CONFIG.telefono)
     result = result.replace(/{empresa\.banco}/g, EMPRESA_CONFIG.banco)
     result = result.replace(/{empresa\.direccion}/g, EMPRESA_CONFIG.direccion)
+    // Días de crédito: puede venir desde el contexto o del config global
+    if (context.empresa && context.empresa.dias_credito !== undefined) {
+        result = result.replace(/{empresa\.dias_credito}/g, context.empresa.dias_credito)
+    } else {
+        result = result.replace(/{empresa\.dias_credito}/g, EMPRESA_CONFIG.dias_credito || '')
+    }
 
     // Fechas
     result = result.replace(/{fecha_actual}/g, formatDate(new Date()))
@@ -120,13 +130,14 @@ function getFacturaDetalles(factura) {
 }
 
 /**
- * Obtiene la fecha de vencimiento (7 días después de la fecha de emisión)
+ * Obtiene la fecha de vencimiento (por defecto 7 días después de la fecha de emisión, puede pasarse un número de días)
  * @param {string|Date} fechaEmision - Fecha de emisión
+ * @param {number} [dias=7] - Días de crédito a sumar
  * @returns {Date} - Fecha de vencimiento
  */
-function getVencimiento(fechaEmision) {
+function getVencimiento(fechaEmision, dias = 7) {
     const fecha = new Date(fechaEmision)
-    fecha.setDate(fecha.getDate() + 7)
+    fecha.setDate(fecha.getDate() + dias)
     return fecha
 }
 
@@ -256,6 +267,9 @@ export function getExampleContext() {
             cantidad_kg: 50,
             precio_credito: 6.38
         },
-        fecha_entrega: '2026-02-20'
+        fecha_entrega: '2026-02-20',
+        empresa: {
+            dias_credito: 7
+        }
     }
 }

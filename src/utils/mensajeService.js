@@ -37,12 +37,13 @@ const MENSAJES_PREDEFINIDOS = [
         id: 'pedido',
         nombre: 'Catálogo de Productos',
         tipo: 'pedido',
-        contenido: `Cordial saludo estimado {cliente.nombre},\n\nYa estamos recibiendo pedidos. A continuación, les presentamos nuestra lista de productos y precios disponibles para la venta:\n\nFecha de entrega estimada: {fecha_entrega}\n\n{producto.nombre}\n• Precio Contado: ${producto.precio} USD\n• Precio Crédito: ${producto.precio_credito} USD\n\n_El crédito es por 15 días_\n\nEstamos a su disposición para cualquier consulta o pedido. ¡Que tengan un excelente día!`,
-        variables: ['{cliente.nombre}', '{fecha_entrega}', '{producto.nombre}', '{producto.precio}', '{producto.precio_credito}'],
+        contenido: `Cordial saludo estimado {cliente.nombre},\n\nYa estamos recibiendo pedidos. A continuación, les presentamos nuestra lista de productos y precios disponibles para la venta:\n\nFecha de entrega estimada: {fecha_entrega}\n\n{producto.nombre}\n• Precio Contado: ${producto.precio} USD\n• Precio Crédito: ${producto.precio_credito} USD\n\n_El crédito es por {empresa.dias_credito} días_\n\nEstamos a su disposición para cualquier consulta o pedido. ¡Que tengan un excelente día!`,
+        variables: ['{cliente.nombre}', '{fecha_entrega}', '{producto.nombre}', '{producto.precio}', '{producto.precio_credito}', '{empresa.dias_credito}'],
         activo: true,
         fecha_creacion: new Date().toISOString(),
         fecha_actualizacion: new Date().toISOString()
     },
+
     {
         id: 'agradecimiento',
         nombre: 'Agradecimiento por Pago',

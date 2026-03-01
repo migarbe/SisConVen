@@ -464,6 +464,7 @@ function App() {
                         setExternalEditCliente={setExternalEditCliente}
                         facturas={facturas}
                         tasaCambio={tasaCambio}
+                        diasCredito={diasCredito}
                     />
                 )
             case 'productos':
@@ -536,6 +537,7 @@ function App() {
                         productos={productos}
                         deliveryDate={deliveryDate}
                         setDeliveryDate={setDeliveryDate}
+                        diasCredito={diasCredito}
                     />
                 )
             case 'exchanger':

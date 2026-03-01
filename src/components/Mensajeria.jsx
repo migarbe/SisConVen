@@ -3,7 +3,7 @@ import { normalizePhoneVE, formatBs, formatPhoneForDisplay } from '../utils/form
 import { Box, Typography, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, InputLabel, Select, MenuItem, FormControl, Grid, Alert, Tooltip, Autocomplete } from '@mui/material'
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, Save as SaveIcon, Cancel as CancelIcon, Print as PrintIcon, AttachMoney as AttachMoneyIcon } from '@mui/icons-material'
 
-export default function Mensajeria({ clientes, facturas, tasaCambio, productos = [], deliveryDate, setDeliveryDate }) {
+export default function Mensajeria({ clientes, facturas, tasaCambio, productos = [], deliveryDate, setDeliveryDate, diasCredito = 7 }) {
     const [tipoMensaje, setTipoMensaje] = useState('')
     const [clienteSeleccionadoId, setClienteSeleccionadoId] = useState('')
     const [mensajeGenerado, setMensajeGenerado] = useState('')
@@ -52,10 +52,11 @@ export default function Mensajeria({ clientes, facturas, tasaCambio, productos =
             texto += `Hola ${cliente.nombre}, reciba un cordial saludo,` + '\n\n'
             texto += `Le informamos sobre su deuda pendiente detallada a continuación:` + '\n\n'
 
+            const creditDays = diasCredito || 7
             let totalUSD = 0
             pendientes.forEach(f => {
                 const fechaEmi = formatDateDDMMYYYY(f.fecha)
-                const fechaVenc = formatDateDDMMYYYY(new Date(new Date(f.fecha).getTime() + 7 * 24 * 60 * 60 * 1000))
+                const fechaVenc = formatDateDDMMYYYY(new Date(new Date(f.fecha).getTime() + creditDays * 24 * 60 * 60 * 1000))
                 texto += `*Factura:* #${f.id} — *Fecha:* ${fechaEmi} — *Vence:* ${fechaVenc}\n`
                 texto += `*Monto pendiente:* $${formatNumberVE(f.saldo_pendiente_usd, 2)} USD (${formatBs(f.saldo_pendiente_usd * (tasaCambio || 0))})\n\n`
                 totalUSD += f.saldo_pendiente_usd
@@ -91,7 +92,8 @@ export default function Mensajeria({ clientes, facturas, tasaCambio, productos =
                 texto += 'No hay productos disponibles para listar.'
             }
 
-            texto += '_El crédito es por 15 días_\n\n'
+            const creditDays = diasCredito || 7
+            texto += `_El crédito es por ${creditDays} días_\n\n`
             texto += 'Estamos a su disposición para cualquier consulta o pedido. ¡Que tengan un excelente día!'
         } else if (tipoMensaje === 'agradecimiento') {
             texto += `Hola ${cliente.nombre}, reciba un cordial saludo,` + '\n\n'

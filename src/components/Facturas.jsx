@@ -554,7 +554,7 @@ export default function Facturas({ facturas, setFacturas, pedidos, setPedidos, c
         const totalUSD = formatNumberVE(factura.saldo_pendiente_usd, 2)
         const totalBs = formatBs(factura.saldo_pendiente_usd * (tasaCambio || 0))
 
-        const whatsappText = `Hola ${clienteNombre}, cordial saludo.\n\nLe recordamos que tiene una factura pendiente a su nombre:\n*Factura:* #${factura.id}\n*Fecha de emisión:* ${formatDateDDMMYYYY(fechaCreacion)}\n*Fecha de vencimiento:* ${formatDateDDMMYYYY(fechaVencimiento)}\n\n*Detalle:*\n${itemsText}\n\n*Saldo pendiente:* $${totalUSD} USD (${totalBs})\n\nPor favor, realice el pago antes de la fecha de vencimiento. Muchas gracias.`
+        const whatsappText = `Hola ${clienteNombre}, reciba un cordial saludo.\n\nLe recordamos que tiene una factura pendiente a su nombre:\n*Factura:* #${factura.id}\n*Fecha de emisión:* ${formatDateDDMMYYYY(fechaCreacion)}\n*Fecha de vencimiento:* ${formatDateDDMMYYYY(fechaVencimiento)}\n\n*Detalle:*\n${itemsText}\n\n*Saldo pendiente:* $${totalUSD} USD (${totalBs})\n\nPor favor, realice el pago antes de la fecha de vencimiento. Muchas gracias.`
 
         // Normalizar y validar teléfono del cliente
         const telefonoRaw = cliente?.telefono || ''

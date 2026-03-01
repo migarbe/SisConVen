@@ -7,6 +7,7 @@ export default function MensajeGenerator({
     facturas = [],
     productos = [],
     tasaCambio = 0,
+    diasCredito = 7,
     onGenerarMensaje = null,
     onWhatsApp = null,
     tipoInicial = null,
@@ -145,6 +146,14 @@ export default function MensajeGenerator({
         // Fecha de entrega
         if (mensaje.variables.some(v => v.includes('fecha_entrega'))) {
             context.fecha_entrega = fechaEntrega || fechaEntregaInicial || new Date().toISOString().split('T')[0]
+        }
+
+        // Añadir días de crédito si se requiere
+        if (typeof diasCredito !== 'undefined') {
+            context.empresa = {
+                ...(context.empresa || {}),
+                dias_credito: diasCredito
+            }
         }
 
         return context

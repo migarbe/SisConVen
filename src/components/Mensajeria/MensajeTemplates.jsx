@@ -15,7 +15,7 @@ export default function MensajeTemplates({ onSeleccionar }) {
             nombre: 'Catálogo de Productos',
             descripcion: 'Mensaje para informar sobre productos disponibles para pedido',
             icono: '📦',
-            variables: ['{cliente.nombre}', '{producto.nombre}', '{producto.precio}', '{fecha_entrega}']
+            variables: ['{cliente.nombre}', '{producto.nombre}', '{producto.precio}', '{fecha_entrega}', '{empresa.dias_credito}']
         },
         {
             tipo: 'agradecimiento',
@@ -75,7 +75,7 @@ export default function MensajeTemplates({ onSeleccionar }) {
             case 'cobro':
                 return `Hola {cliente.nombre}, reciba un cordial saludo,\n\nLe informamos sobre su deuda pendiente detallada a continuación:\n\n*Factura:* #{factura.id} — *Fecha:* {factura.fecha} — *Vence:* {factura.vencimiento}\n*Monto pendiente:* ${factura.saldo} USD\n\n*Total adeudado:* ${factura.total} USD\n\nPor favor, realice el pago antes de la fecha de vencimiento. Muchas gracias.`
             case 'pedido':
-                return `Cordial saludo estimado {cliente.nombre},\n\nYa estamos recibiendo pedidos. A continuación, les presentamos nuestra lista de productos y precios disponibles para la venta:\n\nFecha de entrega estimada: {fecha_entrega}\n\n{producto.nombre}\n• Precio Contado: ${producto.precio} USD\n• Precio Crédito: ${producto.precio_credito} USD\n\n_El crédito es por 15 días_\n\nEstamos a su disposición para cualquier consulta o pedido. ¡Que tengan un excelente día!`
+                return `Cordial saludo estimado {cliente.nombre},\n\nYa estamos recibiendo pedidos. A continuación, les presentamos nuestra lista de productos y precios disponibles para la venta:\n\nFecha de entrega estimada: {fecha_entrega}\n\n{producto.nombre}\n• Precio Contado: ${producto.precio} USD\n• Precio Crédito: ${producto.precio_credito} USD\n\n_El crédito es por {empresa.dias_credito} días_\n\nEstamos a su disposición para cualquier consulta o pedido. ¡Que tengan un excelente día!`
             case 'agradecimiento':
                 return `Hola {cliente.nombre}, reciba un cordial saludo,\n\nGracias por su preferencia y confianza en nuestros productos.\n\nReferencia: Factura #{factura.id} del {factura.fecha}. Agradecemos su pago.`
             case 'detalles_pago':

@@ -28,7 +28,8 @@ export default function MensajePreview({ mensaje }) {
             cliente: { nombre: '', telefono: '', direccion: '', email: '' },
             factura: { id: '', fecha: '', saldo_pendiente_usd: 0, total_usd: 0, detalles: [] },
             producto: { nombre: '', precio_usd: 0, cantidad_kg: 0, precio_credito: 0 },
-            fecha_entrega: ''
+            fecha_entrega: '',
+            empresa: { dias_credito: 7 }
         })
         setMostrarPersonalizado(true)
     }
@@ -150,6 +151,16 @@ export default function MensajePreview({ mensaje }) {
                                             />
                                         </div>
                                     </div>
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Días de Crédito (empresa)</label>
+                                    <input
+                                        type="number"
+                                        className="form-input"
+                                        value={contextoPersonalizado.empresa?.dias_credito || ''}
+                                        onChange={(e) => handleContextChange('empresa', 'dias_credito', parseInt(e.target.value) || 0)}
+                                        min="0"
+                                    />
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label">Fecha de Entrega</label>
