@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { formatBs } from '../utils/formatters'
-import { fetchExchangeRates, getLastUpdateString, getDollarBrecha, getApiStatus, getRateSource, getBcvFechaVigencia } from '../utils/exchangeRateService'
+import { fetchExchangeRates, getLastUpdateString, getDollarBrecha, getApiStatus } from '../utils/exchangeRateService'
+import RateSource from './RateSource'
 import { Box, Typography, Grid, Card, CardContent, Chip, Button, LinearProgress, Alert, IconButton, Tooltip } from '@mui/material'
 import { Refresh as RefreshIcon, TrendingUp as TrendingUpIcon, AttachMoney as AttachMoneyIcon, ShoppingCart as ShoppingCartIcon, Info as InfoIcon } from '@mui/icons-material'
 
@@ -9,8 +10,7 @@ export default function Dashboard({ facturas, pagos, tasaCambio, setTasaCambio, 
     const [lastUpdate, setLastUpdate] = useState(getLastUpdateString())
     const [brechaInfo, setBrechaInfo] = useState(null)
     const [loadingBrecha, setLoadingBrecha] = useState(false)
-    const [rateSource, setRateSource] = useState(getRateSource())
-    const [bcvFecha, setBcvFecha] = useState(getBcvFechaVigencia())
+    // source information shown with RateSource component
     const LOW_STOCK_THRESHOLD = 5 // Kg
     // incluir productos con 0 Kg y los que están por debajo del umbral
     const lowStockList = productos.filter(p => (p.cantidad_kg || 0) < LOW_STOCK_THRESHOLD)
@@ -40,13 +40,7 @@ export default function Dashboard({ facturas, pagos, tasaCambio, setTasaCambio, 
         
         loadBrecha()
         loadApiStatus()
-        // set initial source and fecha if available
-        try {
-            setRateSource(getRateSource())
-            setBcvFecha(getBcvFechaVigencia())
-        } catch (err) {
-            // ignore
-        }
+        // source/date handled by RateSource component
     }, [])
 
     const daysBetween = (from, to) => {
@@ -136,8 +130,7 @@ export default function Dashboard({ facturas, pagos, tasaCambio, setTasaCambio, 
                 setTasaCambio(rates.VES)
             }
             setLastUpdate(getLastUpdateString())
-                setRateSource(getRateSource())
-                setBcvFecha(getBcvFechaVigencia())
+            // source/date info updated by RateSource component automatically
             // Also refresh API status
             try {
                 await getApiStatus()
@@ -161,9 +154,8 @@ export default function Dashboard({ facturas, pagos, tasaCambio, setTasaCambio, 
                 <Typography variant="subtitle1" color="textSecondary">
                     Resumen general de ventas y pagos
                 </Typography>
+                <RateSource />
             </Box>
-
-            {/* Tasa de Cambio Automática */}
             <Card sx={{ mb: 3 }}>
                 <CardContent>
                     <Box display="flex" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2}>
@@ -174,11 +166,8 @@ export default function Dashboard({ facturas, pagos, tasaCambio, setTasaCambio, 
                             <Typography variant="body2" color="textSecondary">
                                 🕐 Última actualización: {lastUpdate}
                             </Typography>
-                            {(rateSource || bcvFecha) && (
-                                <Typography variant="body2" color="textSecondary">
-                                    {rateSource && (`Fuente: ${rateSource}`)}{rateSource && bcvFecha ? ' • ' : ''}{bcvFecha && (`Fecha vigencia: ${bcvFecha}`)}
-                                </Typography>
-                            )}
+                            {/* rate source and date */}
+                            <RateSource />
                         </Box>
                         <Box display="flex" gap={1}>
                             <Button
@@ -244,6 +233,7 @@ export default function Dashboard({ facturas, pagos, tasaCambio, setTasaCambio, 
                         </Grid>
                         <Typography variant="body2" color="textSecondary" mt={2} textAlign="center">
                             🕐 Actualizado: {new Date(brechaInfo.fechaActualizacion).toLocaleString('es-VE')}
+                            {brechaInfo.fuente && (` • Fuente: ${brechaInfo.fuente}`)}
                         </Typography>
                     </CardContent>
                 </Card>

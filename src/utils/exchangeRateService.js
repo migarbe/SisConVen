@@ -5,8 +5,9 @@ const DOLAR_API_URL = 'https://ve.dolarapi.com/v1/dolares';
 const COP_API_URL = 'https://co.dolarapi.com/v1/cotizaciones/usd';
 const EUR_API_URL = 'https://ve.dolarapi.com/v1/euros';
 const STATUS_API_URL = 'https://ve.dolarapi.com/v1/estado';
-// URL provided by BCV JSON feed for official USD rate
+// New BCV JSON feed used by SisConVen team
 const BCV_JSON_URL = 'https://agroflorca.ddns.net/sisconven/tasa_bcv.json';
+
 const CACHE_KEY = 'exchangeRatesCache';
 const HISTORY_KEY = 'exchangeRatesHistory';
 const MAX_HISTORY_DAYS = 90; // Keep up to 90 days of history
@@ -21,69 +22,11 @@ let parallelEurRate = null; // Euro paralelo
 let officialEurRate = null; // Euro oficial
 let copRate = null; // Peso Colombiano
 let apiStatus = null; // Estado de la API
-let bcvSource = null; // Source label when BCV JSON used (e.g., 'SISCONVEN')
-let bcvFechaVigencia = null; // formatted fecha_vigencia from BCV JSON
 
-// -----------------------------------------------------------------------------
-// Helper for BCV official rate
-// -----------------------------------------------------------------------------
-/**
- * Fetch the official USD/VES rate from the BCV JSON feed.
- * The file returns a JSON object with a "tasa" field containing a string
- * with comma as decimal separator (e.g. "417,35790000").
- * @returns {Promise<number|null>} parsed rate or null if fetch/parse fails
- */
-async function fetchBcvOfficialRate() {
-    try {
-        const res = await fetch(BCV_JSON_URL);
-        if (!res.ok) throw new Error('BCV JSON not reachable');
-        const data = await res.json();
-        if (data && data.tasa) {
-            // convert comma to dot and parse
-            const normalized = data.tasa.replace(/\./g, '').replace(',', '.');
-            const rate = parseFloat(normalized);
-            if (!isNaN(rate)) {
-                // store source label and try to extract and format fecha_vigencia
-                bcvSource = 'SISCONVEN';
-                try {
-                    const rawFecha = data.fecha_vigencia || data.fecha || '';
-                    // take last non-empty line if contains labels
-                    const parts = rawFecha.split('\n').map(s => s.trim()).filter(Boolean);
-                    const candidate = parts.length ? parts[parts.length - 1] : rawFecha.trim();
-                    // match patterns like "Viernes, 27 Febrero 2026" or "Viernes, 27 de Febrero de 2026"
-                    const m = candidate.match(/^([^,]+),\s*(\d{1,2})\s+([A-Za-zÁÉÍÓÚáéíóúñÑ]+)\s+(\d{4})$/);
-                    if (m) {
-                        const weekday = m[1];
-                        const day = m[2];
-                        const month = m[3];
-                        const year = m[4];
-                        bcvFechaVigencia = `${weekday}, ${day} de ${month} de ${year}`;
-                    } else if (candidate) {
-                        // fallback: try to normalize by inserting 'de' before month and year
-                        const parts2 = candidate.split(' ');
-                        if (parts2.length >= 3) {
-                            const weekday = parts2[0].replace(',', '');
-                            const day = parts2[1].replace(',', '');
-                            const month = parts2[2];
-                            const year = parts2[3] || '';
-                            bcvFechaVigencia = `${weekday}, ${day} de ${month}${year ? ' de ' + year : ''}`;
-                        } else {
-                            bcvFechaVigencia = candidate;
-                        }
-                    }
-                } catch (err) {
-                    console.warn('Could not parse BCV fecha_vigencia:', err);
-                    bcvFechaVigencia = null;
-                }
-
-                return rate;
-            }
-        }
-    } catch (err) {
-        console.warn('Could not fetch BCV rate:', err);
-    }
-    return null;
-}
+// BCV feed information
+let bcvRate = null;            // Official dollar extracted from SISCONVEN JSON
+let bcvFecha = null;           // Formatted fecha_vigencia
+let rateSource = 'DolarAPI';   // Current source, either 'DolarAPI' or 'SISCONVEN' (BCV JSON)
 
 /**
  * Fetch exchange rates from DolarAPI
@@ -91,13 +34,15 @@ async function fetchBcvOfficialRate() {
  */
 export async function fetchExchangeRates() {
     try {
-        // First try to obtain BCV official rate; if successful we will use it
-        const bcvRate = await fetchBcvOfficialRate();
-        if (bcvRate !== null) {
-            officialDollarRate = bcvRate;
-        }
+        // reset source to default each call
+        rateSource = 'DolarAPI';
+        bcvRate = null;
+        bcvFecha = null;
 
-        // Fetch other rates in parallel (we still call DolarAPI for parallels, EUR, COP, etc.)
+        // try to pull BCV official rate first; if successful, will set rateSource = 'SISCONVEN'
+        const bcvr = await fetchBcvOfficialRate();
+
+        // Fetch all rates in parallel (API endpoints may provide parallels, eur, cop, etc.)
         const [vesResponse, copResponse, eurResponse] = await Promise.allSettled([
             fetch(DOLAR_API_URL),
             fetch(COP_API_URL),
@@ -107,10 +52,10 @@ export async function fetchExchangeRates() {
         let results = {};
         let base = 'USD';
 
-        // if we already obtained an official rate from BCV prior to the API call,
-        // make sure the results object reflects it so the rest of the logic works
-        if (officialDollarRate != null) {
-            results['VES'] = officialDollarRate;
+        // If BCV gave us a rate, use it as the main VES rate right away
+        if (bcvr) {
+            officialDollarRate = bcvr;
+            results['VES'] = bcvr;
         }
 
         // Process VES rates from Venezuelan API
@@ -125,13 +70,13 @@ export async function fetchExchangeRates() {
                     if (rate) {
                         // Store specific dollar types
                         if (nombre.includes('oficial') || nombre.includes('bcv')) {
-                            // only override if we didn't get a BCV rate earlier
-                            if (officialDollarRate == null) {
+                            // only override officialDollarRate if BCV didn't provide one
+                            if (!bcvr) {
                                 officialDollarRate = rate;
-                            }
-                            // Use official as main VES rate for backward compatibility
-                            if (!results['VES']) {
-                                results['VES'] = officialDollarRate;
+                                // Use official as main VES rate for backward compatibility
+                                if (!results['VES']) {
+                                    results['VES'] = rate;
+                                }
                             }
                         } else if (nombre.includes('paralelo') || nombre.includes('monitor') || nombre.includes('bitcoin') || nombre.includes('sicad')) {
                             // Use the first parallel dollar found
@@ -142,7 +87,7 @@ export async function fetchExchangeRates() {
                     }
                 });
 
-                // If no official found from the API and we still have none, fill from data
+                // If no official found but we have data and BCV didn't supply it, use the first one
                 if (!officialDollarRate && data.length > 0) {
                     const firstDollar = data[0];
                     officialDollarRate = firstDollar.promedio || firstDollar.venta || firstDollar.price;
@@ -301,8 +246,8 @@ export async function getExchangeRateHistory(days = 30) {
  */
 export async function getDollarBrecha() {
     try {
-        // try to get BCV rate first; we'll treat it as the official rate if successful
-        const bcvRate = await fetchBcvOfficialRate();
+        // attempt BCV rate first (may update state)
+        const bcvr = await fetchBcvOfficialRate();
 
         const response = await fetch(DOLAR_API_URL);
         if (!response.ok) throw new Error('Failed to fetch dolarapi');
@@ -310,7 +255,7 @@ export async function getDollarBrecha() {
         const data = await response.json();
 
         if (Array.isArray(data)) {
-            let oficial = bcvRate || null;
+            let oficial = bcvr || null;
             let paralelo = null;
 
             data.forEach((dollar) => {
@@ -332,7 +277,8 @@ export async function getDollarBrecha() {
                     oficial,
                     paralelo,
                     brecha: parseFloat(brecha.toFixed(2)),
-                    fechaActualizacion: data[0]?.fechaActualizacion || new Date().toISOString()
+                    fechaActualizacion: data[0]?.fechaActualizacion || new Date().toISOString(),
+                    fuente: rateSource
                 };
             }
 
@@ -342,7 +288,8 @@ export async function getDollarBrecha() {
                     oficial,
                     paralelo: oficial,
                     brecha: 0,
-                    fechaActualizacion: data[0]?.fechaActualizacion || new Date().toISOString()
+                    fechaActualizacion: data[0]?.fechaActualizacion || new Date().toISOString(),
+                    fuente: rateSource
                 };
             }
         }
@@ -367,25 +314,12 @@ export function getParallelDollarRate() {
  * @returns {number|null} Official dollar rate in VES
  */
 export function getOfficialDollarRate() {
-    return officialDollarRate;
-}
-
-/**
- * Get source label for the official rate (e.g., 'SISCONVEN' if BCV JSON used)
- * @returns {string|null}
- */
-export function getRateSource() {
-    if (bcvSource) return bcvSource;
-    if (officialDollarRate) return 'DolarAPI';
-    return null;
-}
-
-/**
- * Get formatted fecha_vigencia provided by BCV JSON (e.g. "Viernes, 27 de Febrero de 2026")
- * @returns {string|null}
- */
-export function getBcvFechaVigencia() {
-    return bcvFechaVigencia;
+    // Prefer the BCV rate if for some reason officialDollarRate hasn't been
+    // initialized yet (it should normally be set to the BCV value when
+    // fetchBcvOfficialRate succeeds). This guards against subtle timing
+    // issues where bcvRate is available but officialDollarRate is still
+    // null.
+    return officialDollarRate != null ? officialDollarRate : bcvRate;
 }
 
 /**
@@ -611,6 +545,84 @@ export async function getApiStatus() {
     return null;
 }
 
+// ---------- BCV JSON helpers ----------
+
+/**
+ * Parse a rate string like "1.234,56" or "1,234.56" into a number.
+ */
+function parseTasa(str) {
+    if (typeof str !== 'string') return null;
+    let s = str.trim();
+    if (!s) return null;
+    // remove spaces
+    s = s.replace(/\s/g, '');
+    // typical formatting from BCV JSON uses comma as decimal separator and dots for thousands
+    // we'll remove dots and convert comma to dot; this also handles the opposite case.
+    s = s.replace(/\./g, '').replace(/,/g, '.');
+    const n = parseFloat(s);
+    return isNaN(n) ? null : n;
+}
+
+/**
+ * Format a raw fecha_vigencia into a localized string
+ */
+function formatBcvDate(raw) {
+    if (!raw) return null;
+    let d = new Date(raw);
+    if (isNaN(d)) {
+        // try dd/mm/yyyy or dd-mm-yyyy
+        const m = raw.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+        if (m) {
+            const [, dd, mm, yy] = m;
+            d = new Date(`${mm}/${dd}/${yy}`);
+        }
+    }
+    if (isNaN(d)) {
+        return raw; // give up
+    }
+    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    return d.toLocaleDateString('es-VE', options);
+}
+
+/**
+ * Try to fetch the official dollar rate from the BCV JSON (SISCONVEN feed).
+ * Updates local state (bcvRate, bcvFecha, rateSource) if successful.
+ * @returns {Promise<number|null>} rate in VES or null
+ */
+export async function fetchBcvOfficialRate() {
+    try {
+        const response = await fetch(BCV_JSON_URL);
+        if (!response.ok) throw new Error(`BCV JSON request failed: ${response.status}`);
+        const data = await response.json();
+        if (data && data.tasa) {
+            const num = parseTasa(data.tasa);
+            if (num !== null) {
+                bcvRate = num;
+                bcvFecha = formatBcvDate(data.fecha_vigencia || data.fecha || data.fechavigencia);
+                rateSource = 'SISCONVEN';
+                return num;
+            }
+        }
+    } catch (err) {
+        console.warn('Error fetching BCV JSON rate:', err);
+    }
+    return null;
+}
+
+/**
+ * Get the current rate source string ('SISCONVEN' or 'DolarAPI')
+ */
+export function getRateSource() {
+    return rateSource;
+}
+
+/**
+ * Get the formatted fecha_vigencia returned by BCV JSON (if any)
+ */
+export function getBcvFechaVigencia() {
+    return bcvFecha;
+}
+
 /**
  * Save rates to localStorage cache
  */
@@ -618,7 +630,9 @@ function saveRatesToCache() {
     try {
         const cacheData = {
             rates: cachedRates,
-            timestamp: lastUpdate.toISOString()
+            timestamp: lastUpdate.toISOString(),
+            rateSource,
+            bcvFecha
         };
         localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
     } catch (error) {
@@ -637,6 +651,8 @@ function loadRatesFromCache() {
             const cacheData = JSON.parse(cached);
             cachedRates = cacheData.rates;
             lastUpdate = new Date(cacheData.timestamp);
+            if (cacheData.rateSource) rateSource = cacheData.rateSource;
+            if (cacheData.bcvFecha) bcvFecha = cacheData.bcvFecha;
             return true;
         }
     } catch (error) {

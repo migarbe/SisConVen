@@ -4,10 +4,9 @@ import {
     convertCurrency,
     formatNumber,
     getLastUpdateString,
-    getDollarBrecha,
-    getRateSource,
-    getBcvFechaVigencia
+    getDollarBrecha
 } from '../utils/exchangeRateService'
+import RateSource from './RateSource'  // new component for source/date info
 import { Box, Typography, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, InputLabel, Select, MenuItem, FormControl, Grid, Alert, Tooltip, Autocomplete } from '@mui/material'
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, Save as SaveIcon, Cancel as CancelIcon, Print as PrintIcon, AttachMoney as AttachMoneyIcon } from '@mui/icons-material'
 
@@ -35,8 +34,7 @@ export default function Exchanger() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
     const [brechaInfo, setBrechaInfo] = useState(null)
-    const [rateSource, setRateSource] = useState(getRateSource())
-    const [bcvFecha, setBcvFecha] = useState(getBcvFechaVigencia())
+    // rateSource and bcvFecha are rendered via RateSource component; no local state needed
 
     // Fetch rates on mount
     useEffect(() => {
@@ -76,8 +74,7 @@ export default function Exchanger() {
             const rates = await fetchExchangeRates()
             setExchangeRates(rates)
             setLastUpdate(getLastUpdateString())
-            setRateSource(getRateSource())
-            setBcvFecha(getBcvFechaVigencia())
+            // RateSource component will read current source & fecha automatically
         } catch (err) {
             setError('Error al cargar las tasas de cambio. Usando datos en caché.')
             console.error('Error loading rates:', err)
@@ -131,6 +128,7 @@ export default function Exchanger() {
             <div className="page-header">
                 <h1 className="page-title">💱 Tasas de Cambio</h1>
                 <p className="page-subtitle">Conversor de divisas con tasas en tiempo real</p>
+                <RateSource />
             </div>
 
             {/* Error Toast */}
@@ -170,13 +168,10 @@ export default function Exchanger() {
                         <span>Última actualización: {lastUpdate || 'Cargando...'}</span>
                     </div>
 
-                    {(rateSource || bcvFecha) && (
-                        <div className="text-small text-muted mt-1" style={{ display: 'flex', gap: '0.5rem' }}>
-                            {rateSource && <span>Fuente: {rateSource}</span>}
-                            {rateSource && bcvFecha && <span>•</span>}
-                            {bcvFecha && <span>Fecha vigencia: {bcvFecha}</span>}
-                        </div>
-                    )}
+                    {/* source/fecha info rendered by separate component */}
+                    <div className="mt-1">
+                        <RateSource />
+                    </div>
                 </div>
             </div>
 
@@ -216,6 +211,7 @@ export default function Exchanger() {
                         </div>
                         <div className="text-small text-muted mt-3 text-center">
                             🕐 Actualizado: {new Date(brechaInfo.fechaActualizacion).toLocaleString('es-VE')}
+                            {brechaInfo.fuente && (` • Fuente: ${brechaInfo.fuente}`)}
                         </div>
                     </div>
                 </div>
