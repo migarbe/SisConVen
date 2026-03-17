@@ -65,11 +65,12 @@ export async function fetchExchangeRates() {
             if (Array.isArray(data)) {
                 data.forEach((dollar) => {
                     const nombre = dollar.nombre?.toLowerCase() || '';
+                    const fuente = dollar.fuente?.toLowerCase() || '';
                     const rate = dollar.promedio || dollar.venta || dollar.price;
 
                     if (rate) {
                         // Store specific dollar types
-                        if (nombre.includes('oficial') || nombre.includes('bcv')) {
+                        if (fuente === 'oficial' || nombre.includes('oficial') || nombre.includes('bcv')) {
                             // only override officialDollarRate if BCV didn't provide one
                             if (!bcvr) {
                                 officialDollarRate = rate;
@@ -78,7 +79,7 @@ export async function fetchExchangeRates() {
                                     results['VES'] = rate;
                                 }
                             }
-                        } else if (nombre.includes('paralelo') || nombre.includes('monitor') || nombre.includes('bitcoin') || nombre.includes('sicad')) {
+                        } else if (fuente === 'paralelo' || nombre.includes('paralelo') || nombre.includes('monitor') || nombre.includes('bitcoin') || nombre.includes('sicad')) {
                             // Use the first parallel dollar found
                             if (!parallelDollarRate) {
                                 parallelDollarRate = rate;
@@ -111,11 +112,12 @@ export async function fetchExchangeRates() {
             if (Array.isArray(eurData)) {
                 eurData.forEach((euro) => {
                     const nombre = euro.nombre?.toLowerCase() || '';
+                    const fuente = euro.fuente?.toLowerCase() || '';
                     const rate = euro.promedio || euro.venta || euro.price;
 
                     if (rate) {
                         // Store specific euro types
-                        if (nombre.includes('oficial') || nombre.includes('bcv')) {
+                        if (fuente === 'oficial' || nombre.includes('oficial') || nombre.includes('bcv')) {
                             officialEurRate = rate;
                             // Convert EUR to USD rate: (VES/EUR) / (VES/USD) = USD/EUR
                             // But we need EUR/USD, so: 1 / ((VES/EUR) / (VES/USD)) = (VES/USD) / (VES/EUR)
@@ -260,9 +262,10 @@ export async function getDollarBrecha() {
 
             data.forEach((dollar) => {
                 const nombre = dollar.nombre?.toLowerCase() || '';
+                const fuente = dollar.fuente?.toLowerCase() || '';
                 const rate = dollar.promedio || dollar.venta || dollar.price;
 
-                if (nombre.includes('oficial') || nombre.includes('bcv')) {
+                if (fuente === 'oficial' || nombre.includes('oficial') || nombre.includes('bcv')) {
                     if (!oficial) oficial = rate;
                 } else if (!paralelo) {
                     // Use first non-official rate as parallel
