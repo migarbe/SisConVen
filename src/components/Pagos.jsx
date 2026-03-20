@@ -3,7 +3,7 @@ import { formatBs, formatUSD, normalizePhoneVE } from '../utils/formatters'
 import { Box, Typography, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, InputLabel, Select, MenuItem, FormControl, Grid, Alert, Tooltip, Autocomplete } from '@mui/material'
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, Save as SaveIcon, Cancel as CancelIcon, Print as PrintIcon, AttachMoney as AttachMoneyIcon } from '@mui/icons-material'
 
-export default function Pagos({ pagos, setPagos, facturas, setFacturas, tasaCambio, clientes, facturaAPagar, setFacturaAPagar }) {
+export default function Pagos({ pagos, setPagos, facturas, setFacturas, tasaCambio, clientes, facturaAPagar, setFacturaAPagar, diasCredito = 15, interesMoratorio = 0 }) {
     const [vistaActiva, setVistaActiva] = useState('lista') // 'lista', 'formulario'
     const [editandoPago, setEditandoPago] = useState(null)
     const [formData, setFormData] = useState({
@@ -18,15 +18,24 @@ export default function Pagos({ pagos, setPagos, facturas, setFacturas, tasaCamb
 
     useEffect(() => {
         if (facturaAPagar) {
+            let montoMora = 0;
+            const fechaVencDate = new Date(new Date(facturaAPagar.fecha).getTime() + (diasCredito * 24 * 60 * 60 * 1000));
+            if (new Date() > fechaVencDate && interesMoratorio > 0 && (facturaAPagar.tipo_precio === 'credito' || !facturaAPagar.tipo_precio)) {
+                const diasAtraso = Math.floor((new Date().getTime() - fechaVencDate.getTime()) / (24 * 60 * 60 * 1000));
+                const periods = Math.floor(diasAtraso / 30) + 1;
+                montoMora = (facturaAPagar.saldo_pendiente_usd || 0) * (interesMoratorio / 100) * periods;
+            }
+            const totalDeuda = (facturaAPagar.saldo_pendiente_usd || 0) + montoMora;
+
             setFormData({
                 factura_id: facturaAPagar.id.toString(),
-                monto_usd: facturaAPagar.saldo_pendiente_usd.toFixed(2),
+                monto_usd: totalDeuda.toFixed(2),
                 forma_pago: 'Pago Movil'
             })
             setVistaActiva('formulario')
             setFacturaAPagar(null) // Limpiar para evitar loop
         }
-    }, [facturaAPagar, setFacturaAPagar])
+    }, [facturaAPagar, setFacturaAPagar, diasCredito, interesMoratorio])
 
     // WhatsApp Message Modal state
     const [whatsappMessage, setWhatsappMessage] = useState('')
@@ -49,19 +58,28 @@ export default function Pagos({ pagos, setPagos, facturas, setFacturas, tasaCamb
             return
         }
 
-        // Si el monto ingresado es >= 95% del saldo pendiente, asumimos que se pagará completamente
+        let montoMora = 0;
+        const fechaVencDate = new Date(new Date(factura.fecha).getTime() + (diasCredito * 24 * 60 * 60 * 1000));
+        if (new Date() > fechaVencDate && interesMoratorio > 0 && (factura.tipo_precio === 'credito' || !factura.tipo_precio)) {
+            const diasAtraso = Math.floor((new Date().getTime() - fechaVencDate.getTime()) / (24 * 60 * 60 * 1000));
+            const periods = Math.floor(diasAtraso / 30) + 1;
+            montoMora = (factura.saldo_pendiente_usd || 0) * (interesMoratorio / 100) * periods;
+        }
+        const deudaTotal = (factura.saldo_pendiente_usd || 0) + montoMora;
+
+        // Si el monto ingresado es >= 95% del saldo pendiente con mora, asumimos que se pagará completamente
         const THRESHOLD = 0.95
-        if (montoUSD >= THRESHOLD * factura.saldo_pendiente_usd) {
-            const montoAjustado = factura.saldo_pendiente_usd
+        if (montoUSD >= THRESHOLD * deudaTotal) {
+            const montoAjustado = deudaTotal
             setFormData(prev => ({ ...prev, monto_usd: montoAjustado.toFixed(2) }))
             montoUSD = montoAjustado
-            alert(`El monto supera el 95% del saldo pendiente. Se ajustará a $${montoAjustado.toFixed(2)} y se registrará como pago completo.`)
+            alert(`El monto supera el 95% del saldo pendiente (incl. mora). Se ajustará a $${montoAjustado.toFixed(2)} y se registrará como pago completo.`)
         }
 
         const montoBS = montoUSD * tasaCambio
 
-        if (montoUSD > factura.saldo_pendiente_usd) {
-            alert(`El monto excede el saldo pendiente. Máximo: $${factura.saldo_pendiente_usd.toFixed(2)} USD (${formatBs(factura.saldo_pendiente_usd * tasaCambio)})`)
+        if (montoUSD > deudaTotal) {
+            alert(`El monto excede el saldo pendiente. Máximo de deuda actual: $${deudaTotal.toFixed(2)} USD (${formatBs(deudaTotal * tasaCambio)})`)
             return
         }
 
@@ -110,8 +128,8 @@ export default function Pagos({ pagos, setPagos, facturas, setFacturas, tasaCamb
                 setPagos(pagos.map(p => p.id === viejoPago.id ? nuevoPago : p))
             }
         } else {
-            // Caso Nuevo Pago
-            nuevoSaldo = parseFloat((factura.saldo_pendiente_usd - montoUSD).toFixed(2))
+            // Caso Nuevo Pago (el saldo pendiente de la factura se ajusta restando el pago a la deuda total, si fue un pago con mora capitaliza la deuda previa)
+            nuevoSaldo = parseFloat((deudaTotal - montoUSD).toFixed(2))
             let nuevoEstado = 'Pendiente'
 
             if (nuevoSaldo <= 0.01) {
@@ -149,6 +167,11 @@ export default function Pagos({ pagos, setPagos, facturas, setFacturas, tasaCamb
         texto += `Factura: #${factura.id}\n`
         texto += `Fecha de pago: ${formatDateDDMMYYYY(fechaPago)}\n`
         texto += `Forma de pago: ${formData.forma_pago}\n`
+        
+        if (montoMora > 0) {
+            texto += `Mora aplicada: $${formatNumberVE(montoMora, 2)} USD\n`
+        }
+        
         texto += `Monto recibido: $${formatNumberVE(montoUSD, 2)} USD (${formatBs(montoBS)})\n`
 
         if (nuevoSaldo <= 0.01) {
@@ -321,10 +344,18 @@ export default function Pagos({ pagos, setPagos, facturas, setFacturas, tasaCamb
                                     // En modo edición mostramos todas las del cliente, en modo nuevo solo las pendientes
                                     if (!editandoPago && factura.saldo_pendiente_usd <= 0) return null;
 
+                                    let mMora = 0;
+                                    const vDate = new Date(new Date(factura.fecha).getTime() + (diasCredito * 24 * 60 * 60 * 1000));
+                                    if (new Date() > vDate && interesMoratorio > 0 && (factura.tipo_precio === 'credito' || !factura.tipo_precio)) {
+                                        const dAtraso = Math.floor((new Date().getTime() - vDate.getTime()) / (24 * 60 * 60 * 1000));
+                                        mMora = (factura.saldo_pendiente_usd || 0) * (interesMoratorio / 100) * (Math.floor(dAtraso / 30) + 1);
+                                    }
+                                    const deudaReal = (factura.saldo_pendiente_usd || 0) + mMora;
+
                                     const cliente = clientes.find(c => c.id === factura.cliente_id)
                                     return (
                                         <option key={factura.id} value={factura.id}>
-                                            #{factura.id} - {cliente?.nombre} - Saldo: ${factura.saldo_pendiente_usd.toFixed(2)}
+                                            #{factura.id} - {cliente?.nombre} - Saldo: ${deudaReal.toFixed(2)} {mMora > 0 ? '(Inc. Mora)' : ''}
                                         </option>
                                     )
                                 })}
@@ -332,25 +363,35 @@ export default function Pagos({ pagos, setPagos, facturas, setFacturas, tasaCamb
                             {editandoPago && <p className="muted text-small mt-1">No se puede cambiar la factura al editar un pago por seguridad del saldo.</p>}
                         </div>
 
-                        {facturaSeleccionada && (
-                            <div className="card mb-3" style={{ background: 'var(--bg-tertiary)' }}>
-                                <h4 className="mb-2">Detalles de la Factura</h4>
-                                <div className="grid grid-3">
-                                    <div>
-                                        <div className="text-small text-muted">Total Factura</div>
-                                        <div className="text-primary">${facturaSeleccionada.total_usd.toFixed(2)}</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-small text-muted">Saldo Pendiente</div>
-                                        <div className="text-primary">${facturaSeleccionada.saldo_pendiente_usd.toFixed(2)}</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-small text-muted">En Bolívares</div>
-                                        <div className="text-primary">{formatBs(facturaSeleccionada.saldo_pendiente_usd * tasaCambio)}</div>
+                        {facturaSeleccionada && (() => {
+                            let mMora = 0;
+                            const vDate = new Date(new Date(facturaSeleccionada.fecha).getTime() + (diasCredito * 24 * 60 * 60 * 1000));
+                            if (new Date() > vDate && interesMoratorio > 0 && (facturaSeleccionada.tipo_precio === 'credito' || !facturaSeleccionada.tipo_precio)) {
+                                const dAtraso = Math.floor((new Date().getTime() - vDate.getTime()) / (24 * 60 * 60 * 1000));
+                                mMora = (facturaSeleccionada.saldo_pendiente_usd || 0) * (interesMoratorio / 100) * (Math.floor(dAtraso / 30) + 1);
+                            }
+                            const deudaReal = (facturaSeleccionada.saldo_pendiente_usd || 0) + mMora;
+
+                            return (
+                                <div className="card mb-3" style={{ background: 'var(--bg-tertiary)' }}>
+                                    <h4 className="mb-2">Detalles de la Factura</h4>
+                                    <div className="grid grid-3">
+                                        <div>
+                                            <div className="text-small text-muted">Total Factura Inicial</div>
+                                            <div className="text-primary">${facturaSeleccionada.total_usd.toFixed(2)}</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-small text-muted">A Pagar {mMora > 0 ? '+ Mora' : ''}</div>
+                                            <div className="text-primary">${deudaReal.toFixed(2)}</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-small text-muted">En Bolívares</div>
+                                            <div className="text-primary">{formatBs(deudaReal * tasaCambio)}</div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        )}
+                            );
+                        })()}
 
                         <div className="form-group">
                             <label className="form-label">Forma de Pago *</label>

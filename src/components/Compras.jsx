@@ -357,7 +357,7 @@ export default function Compras({ compras, setCompras, productos, setProductos, 
                         {formData.items.length > 0 && (
                             <div className="mb-3">
                                 <h5>Items en esta Compra:</h5>
-                                <div className="table-responsive">
+                                <div className="table-container">
                                     <table className="table table-sm">
                                         <thead>
                                             <tr>
@@ -433,7 +433,7 @@ export default function Compras({ compras, setCompras, productos, setProductos, 
                 {compras.length === 0 ? (
                     <p className="text-muted text-center py-4">No hay compras registradas.</p>
                 ) : (
-                    <div className="table-responsive">
+                    <div className="table-container">
                         <table className="table">
                             <thead>
                                 <tr>

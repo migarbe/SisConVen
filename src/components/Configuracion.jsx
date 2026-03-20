@@ -3,7 +3,7 @@ import { formatBs } from '../utils/formatters'
 import { Box, Typography, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, InputLabel, Select, MenuItem, FormControl, Grid, Alert, Tooltip, Autocomplete } from '@mui/material'
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, Save as SaveIcon, Cancel as CancelIcon, Print as PrintIcon, AttachMoney as AttachMoneyIcon } from '@mui/icons-material'
 
-export default function Configuracion({ settings, setSettings, brecha, setBrecha, brechaBase, porcentajeCredito, setPorcentajeCredito, diasCredito, setDiasCredito }) {
+export default function Configuracion({ settings, setSettings, brecha, setBrecha, brechaBase, porcentajeCredito, setPorcentajeCredito, diasCredito, setDiasCredito, interesMoratorio, setInteresMoratorio }) {
 
     // Calcular la brecha total: base (del dólar paralelo) + adicional del usuario
     const brechaTotal = brechaBase + brecha
@@ -119,6 +119,23 @@ export default function Configuracion({ settings, setSettings, brecha, setBrecha
                                     min="0"
                                 />
                                 <span style={{ fontWeight: 600 }}>días</span>
+                            </div>
+                        </div>
+
+                        <div className="form-group">
+                            <label className="form-label">Interés Moratorio</label>
+                            <p className="text-small text-muted mb-2">Porcentaje de recargo de mora (por mes) al vencer crédito.</p>
+                            <div className="flex items-center" style={{ gap: '0.75rem' }}>
+                                <input
+                                    type="number"
+                                    className="form-input"
+                                    value={interesMoratorio}
+                                    onChange={(e) => setInteresMoratorio(parseFloat(e.target.value) || 0)}
+                                    style={{ width: '100%', fontWeight: 'bold' }}
+                                    step="0.01"
+                                    min="0"
+                                />
+                                <span style={{ fontWeight: 600 }}>%</span>
                             </div>
                         </div>
                     </div>

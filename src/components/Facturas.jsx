@@ -3,7 +3,7 @@ import { formatPhoneForDisplay, formatBs } from '../utils/formatters'
 import { Box, Typography, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, InputLabel, Select, MenuItem, FormControl, Grid, Alert, Tooltip, Autocomplete } from '@mui/material'
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, Save as SaveIcon, Cancel as CancelIcon, Print as PrintIcon, AttachMoney as AttachMoneyIcon } from '@mui/icons-material'
 
-export default function Facturas({ facturas, setFacturas, pedidos, setPedidos, clientes, productos, setProductos, openClienteEditor, tasaCambio, vendedores, pedidoAConvertir, setPedidoAConvertir, facturaADetalle, setFacturaADetalle, onPagarFactura, porcentajeCredito, diasCredito = 15 }) {
+export default function Facturas({ facturas, setFacturas, pedidos, setPedidos, clientes, productos, setProductos, openClienteEditor, tasaCambio, vendedores, pedidoAConvertir, setPedidoAConvertir, facturaADetalle, setFacturaADetalle, onPagarFactura, porcentajeCredito, diasCredito = 15, interesMoratorio = 0 }) {
     const [idPedidoOrigen, setIdPedidoOrigen] = useState(null)
     const [formData, setFormData] = useState({
         cliente_id: '',
@@ -551,10 +551,25 @@ export default function Facturas({ facturas, setFacturas, pedidos, setPedidos, c
             return `- ${i.nombre} x${qty} Kg. — $${subtotal} USD`
         }).join('\n')
 
-        const totalUSD = formatNumberVE(factura.saldo_pendiente_usd, 2)
-        const totalBs = formatBs(factura.saldo_pendiente_usd * (tasaCambio || 0))
+        let montoMora = 0;
+        if (new Date() > fechaVencimiento && interesMoratorio > 0 && (factura.tipo_precio === 'credito' || !factura.tipo_precio)) {
+            const diasAtraso = Math.floor((new Date().getTime() - fechaVencimiento.getTime()) / (24 * 60 * 60 * 1000))
+            const periods = Math.floor(diasAtraso / 30) + 1
+            montoMora = (factura.saldo_pendiente_usd || 0) * (interesMoratorio / 100) * periods
+        }
 
-        const whatsappText = `Hola ${clienteNombre}, reciba un cordial saludo.\n\nLe recordamos que tiene una factura pendiente a su nombre:\n*Factura:* #${factura.id}\n*Fecha de emisión:* ${formatDateDDMMYYYY(fechaCreacion)}\n*Fecha de vencimiento:* ${formatDateDDMMYYYY(fechaVencimiento)}\n\n*Detalle:*\n${itemsText}\n\n*Saldo pendiente:* $${totalUSD} USD (${totalBs})\n\nPor favor, realice el pago antes de la fecha de vencimiento. Muchas gracias.`
+        const saldoBase = factura.saldo_pendiente_usd || 0;
+        const totalUSDNum = saldoBase + montoMora;
+        const totalUSD = formatNumberVE(totalUSDNum, 2)
+        const totalBs = formatBs(totalUSDNum * (tasaCambio || 0))
+
+        let whatsappText = `Hola ${clienteNombre}, reciba un cordial saludo.\n\nLe recordamos que tiene una factura pendiente a su nombre:\n*Factura:* #${factura.id}\n*Fecha de emisión:* ${formatDateDDMMYYYY(fechaCreacion)}\n*Fecha de vencimiento:* ${formatDateDDMMYYYY(fechaVencimiento)}\n\n*Detalle:*\n${itemsText}\n\n*Saldo pendiente:* $${totalUSD} USD (${totalBs})\n\n`
+        
+        if (montoMora > 0) {
+            whatsappText += `*Nota:* Este monto incluye $${formatNumberVE(montoMora, 2)} USD por concepto de intereses moratorios al tener ${Math.floor((new Date().getTime() - fechaVencimiento.getTime()) / (24 * 60 * 60 * 1000))} días de atraso.\n\n`
+        }
+
+        whatsappText += `Por favor, realice el pago antes de la fecha de vencimiento. Muchas gracias.`
 
         // Normalizar y validar teléfono del cliente
         const telefonoRaw = cliente?.telefono || ''
@@ -598,7 +613,15 @@ export default function Facturas({ facturas, setFacturas, pedidos, setPedidos, c
                             <select
                                 className="form-select"
                                 value={formData.cliente_id}
-                                onChange={(e) => setFormData({ ...formData, cliente_id: e.target.value })}
+                                onChange={(e) => {
+                                    const clientId = e.target.value;
+                                    const client = clientes.find(c => c.id.toString() === clientId);
+                                    let newTipoPrecio = formData.tipo_precio;
+                                    if (client && client.permite_credito === false) {
+                                        newTipoPrecio = 'contado';
+                                    }
+                                    setFormData({ ...formData, cliente_id: clientId, tipo_precio: newTipoPrecio });
+                                }}
                                 required
                             >
                                 <option value="">Seleccionar cliente...</option>
@@ -633,6 +656,11 @@ export default function Facturas({ facturas, setFacturas, pedidos, setPedidos, c
 
                         <div className="form-group">
                             <label className="form-label">Tipo de Facturación (Afecta a todos los productos) *</label>
+                            {formData.cliente_id && clientes.find(c => c.id.toString() === formData.cliente_id)?.permite_credito === false && (
+                                <Alert severity="warning" sx={{ mb: 2 }}>
+                                    Este cliente solo tiene permitidas transacciones de contado.
+                                </Alert>
+                            )}
                             <div className="flex flex-gap items-center" style={{ background: 'var(--bg-tertiary)', padding: '10px', borderRadius: '8px' }}>
                                 <label className="flex items-center" style={{ cursor: 'pointer' }}>
                                     <input
@@ -645,13 +673,14 @@ export default function Facturas({ facturas, setFacturas, pedidos, setPedidos, c
                                     />
                                     <strong>Contado</strong> (Precios estándar)
                                 </label>
-                                <label className="flex items-center" style={{ cursor: 'pointer', marginLeft: '20px' }}>
+                                <label className="flex items-center" style={{ cursor: (formData.cliente_id && clientes.find(c => c.id.toString() === formData.cliente_id)?.permite_credito === false) ? 'not-allowed' : 'pointer', marginLeft: '20px', opacity: (formData.cliente_id && clientes.find(c => c.id.toString() === formData.cliente_id)?.permite_credito === false) ? 0.5 : 1 }}>
                                     <input
                                         type="radio"
                                         name="global_tipo_precio"
                                         value="credito"
                                         checked={formData.tipo_precio === 'credito'}
                                         onChange={(e) => setFormData({ ...formData, tipo_precio: e.target.value })}
+                                        disabled={formData.cliente_id && clientes.find(c => c.id.toString() === formData.cliente_id)?.permite_credito === false}
                                         style={{ marginRight: '8px' }}
                                     />
                                     <strong>Crédito</strong> (+{porcentajeCredito}% sobre base)
@@ -873,7 +902,7 @@ export default function Facturas({ facturas, setFacturas, pedidos, setPedidos, c
                     <div className="card p-4">
                         <h3 className="mb-3">Resumen de Factura</h3>
                         <div className="mb-2"><strong>Fecha Emisión:</strong> {formatDateDDMMYYYY(detalleFactura.fecha)}</div>
-                        <div className="mb-2"><strong>Vencimiento:</strong> {formatDateDDMMYYYY(new Date(new Date(detalleFactura.fecha).getTime() + 15 * 24 * 60 * 60 * 1000))}</div>
+                        <div className="mb-2"><strong>Vencimiento:</strong> {formatDateDDMMYYYY(new Date(new Date(detalleFactura.fecha).getTime() + (diasCredito || 15) * 24 * 60 * 60 * 1000))}</div>
                         <div className="mb-2">
                             <strong>Estado:</strong>
                             <span className={`badge ml-2 ${detalleFactura.estado === 'Pagada' ? 'badge-success' :
@@ -912,13 +941,39 @@ export default function Facturas({ facturas, setFacturas, pedidos, setPedidos, c
                             </tbody>
                             <tfoot>
                                 <tr>
-                                    <td colSpan="3" className="text-right"><strong>TOTAL:</strong></td>
+                                    <td colSpan="3" className="text-right"><strong>TOTAL FACTURA INICIAL:</strong></td>
                                     <td><strong>${formatNumberVE(detalleFactura.total_usd, 2)} USD</strong></td>
                                 </tr>
-                                <tr>
-                                    <td colSpan="3" className="text-right"><strong>SALDO PENDIENTE:</strong></td>
-                                    <td className="text-danger"><strong>${formatNumberVE(detalleFactura.saldo_pendiente_usd, 2)} USD</strong></td>
-                                </tr>
+                                {(() => {
+                                    let mMora = 0;
+                                    const vDate = new Date(new Date(detalleFactura.fecha).getTime() + (diasCredito * 24 * 60 * 60 * 1000));
+                                    if (new Date() > vDate && interesMoratorio > 0 && (detalleFactura.tipo_precio === 'credito' || !detalleFactura.tipo_precio) && detalleFactura.estado !== 'Pagada') {
+                                        const dAtraso = Math.floor((new Date().getTime() - vDate.getTime()) / (24 * 60 * 60 * 1000));
+                                        mMora = (detalleFactura.saldo_pendiente_usd || 0) * (interesMoratorio / 100) * (Math.floor(dAtraso / 30) + 1);
+                                    }
+                                    const deudaReal = (detalleFactura.saldo_pendiente_usd || 0) + mMora;
+
+                                    return (
+                                        <>
+                                            {mMora > 0 && (
+                                                <tr style={{ background: 'rgba(239, 68, 68, 0.05)' }}>
+                                                    <td colSpan="3" className="text-right">
+                                                        <strong className="text-danger">Recargo Interés Moratorio ({interesMoratorio}% mensual):</strong>
+                                                        <div className="text-small text-muted">Atraso calculado por mes vencido</div>
+                                                    </td>
+                                                    <td className="text-danger"><strong>+${formatNumberVE(mMora, 2)} USD</strong></td>
+                                                </tr>
+                                            )}
+                                            <tr style={{ background: 'rgba(0, 0, 0, 0.02)' }}>
+                                                <td colSpan="3" className="text-right"><strong>SALDO PENDIENTE {mMora > 0 ? 'ACTUALIZADO' : ''}:</strong></td>
+                                                <td className="text-danger">
+                                                    <strong style={{ fontSize: '1.1em' }}>${formatNumberVE(deudaReal, 2)} USD</strong>
+                                                    <div className="text-small">({formatBs(deudaReal * tasaCambio)})</div>
+                                                </td>
+                                            </tr>
+                                        </>
+                                    );
+                                })()}
                             </tfoot>
                         </table>
                     </div>
@@ -1052,7 +1107,28 @@ export default function Facturas({ facturas, setFacturas, pedidos, setPedidos, c
                                                 <td>{cliente?.nombre || 'N/A'}</td>
                                                 <td>{formatDateDDMMYYYY(factura.fecha)}</td>
                                                 <td>${formatNumberVE(factura.total_usd, 2)} USD</td>
-                                                <td>${formatNumberVE(factura.saldo_pendiente_usd, 2)} USD</td>
+                                                <td>
+                                                    {(() => {
+                                                        let mMora = 0;
+                                                        const vDate = new Date(new Date(factura.fecha).getTime() + (diasCredito * 24 * 60 * 60 * 1000));
+                                                        if (new Date() > vDate && interesMoratorio > 0 && (factura.tipo_precio === 'credito' || !factura.tipo_precio) && factura.estado !== 'Pagada') {
+                                                            const dAtraso = Math.floor((new Date().getTime() - vDate.getTime()) / (24 * 60 * 60 * 1000));
+                                                            mMora = (factura.saldo_pendiente_usd || 0) * (interesMoratorio / 100) * (Math.floor(dAtraso / 30) + 1);
+                                                        }
+                                                        const deudaReal = (factura.saldo_pendiente_usd || 0) + mMora;
+
+                                                        return (
+                                                            <>
+                                                                <strong>${formatNumberVE(deudaReal, 2)} USD</strong>
+                                                                {mMora > 0 && (
+                                                                    <div className="text-danger text-small">
+                                                                        (+${formatNumberVE(mMora, 2)} mora)
+                                                                    </div>
+                                                                )}
+                                                            </>
+                                                        );
+                                                    })()}
+                                                </td>
                                                 <td>
                                                     <span className={`badge ${factura.estado === 'Pagada' ? 'badge-success' :
                                                         factura.estado === 'Parcial' ? 'badge-warning' :

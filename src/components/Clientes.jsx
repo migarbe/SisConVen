@@ -3,13 +3,14 @@ import { normalizePhoneVE, formatPhoneForDisplay, formatBs } from '../utils/form
 import { Box, Typography, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, InputLabel, Select, MenuItem, FormControl, Grid, Alert, Tooltip } from '@mui/material'
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, Save as SaveIcon, Cancel as CancelIcon } from '@mui/icons-material'
 
-export default function Clientes({ clientes, setClientes, externalEditCliente, setExternalEditCliente, facturas = [], tasaCambio = 0, diasCredito = 7 }) {
+export default function Clientes({ clientes, setClientes, externalEditCliente, setExternalEditCliente, facturas = [], tasaCambio = 0, diasCredito = 7, interesMoratorio = 0 }) {
     const [vistaActiva, setVistaActiva] = useState('lista') // 'lista', 'formulario', 'facturas'
     const [editando, setEditando] = useState(null)
     const [formData, setFormData] = useState({
         nombre: '',
         telefono: '',
-        direccion: ''
+        direccion: '',
+        permite_credito: false
     })
     const [searchTerm, setSearchTerm] = useState('')
     const [sortConfig, setSortConfig] = useState({ key: 'nombre', direction: 'asc' })
@@ -45,7 +46,7 @@ export default function Clientes({ clientes, setClientes, externalEditCliente, s
         }
 
         // Resetear formulario
-        setFormData({ nombre: '', telefono: '', direccion: '' })
+        setFormData({ nombre: '', telefono: '', direccion: '', permite_credito: false })
         setVistaActiva('lista')
     }
 
@@ -53,7 +54,8 @@ export default function Clientes({ clientes, setClientes, externalEditCliente, s
         setFormData({
             nombre: cliente.nombre,
             telefono: cliente.telefono,
-            direccion: cliente.direccion
+            direccion: cliente.direccion,
+            permite_credito: cliente.permite_credito !== undefined ? cliente.permite_credito : true
         })
         setEditando(cliente)
         setVistaActiva('formulario')
@@ -65,7 +67,8 @@ export default function Clientes({ clientes, setClientes, externalEditCliente, s
             setFormData({
                 nombre: externalEditCliente.nombre || '',
                 telefono: externalEditCliente.telefono || '',
-                direccion: externalEditCliente.direccion || ''
+                direccion: externalEditCliente.direccion || '',
+                permite_credito: externalEditCliente.permite_credito !== undefined ? externalEditCliente.permite_credito : true
             })
             setEditando(externalEditCliente)
             setVistaActiva('formulario')
@@ -82,7 +85,7 @@ export default function Clientes({ clientes, setClientes, externalEditCliente, s
     }
 
     const handleCancelar = () => {
-        setFormData({ nombre: '', telefono: '', direccion: '' })
+        setFormData({ nombre: '', telefono: '', direccion: '', permite_credito: false })
         setEditando(null)
         setVistaActiva('lista')
     }
@@ -104,13 +107,28 @@ export default function Clientes({ clientes, setClientes, externalEditCliente, s
         if (!factura || !cliente) return
         const creditDays = diasCredito || 7
         const fechaEmi = formatDateDDMMYYYY(factura.fecha)
-        const fechaVenc = formatDateDDMMYYYY(new Date(new Date(factura.fecha).getTime() + creditDays * 24 * 60 * 60 * 1000))
-        const montoUSD = factura.saldo_pendiente_usd || 0
+        const fechaVencDate = new Date(new Date(factura.fecha).getTime() + creditDays * 24 * 60 * 60 * 1000)
+        const fechaVenc = formatDateDDMMYYYY(fechaVencDate)
+        let montoMora = 0;
+        
+        if (new Date() > fechaVencDate && interesMoratorio > 0 && (factura.tipo_precio === 'credito' || !factura.tipo_precio)) {
+            const diasAtraso = Math.floor((new Date().getTime() - fechaVencDate.getTime()) / (24 * 60 * 60 * 1000))
+            const periods = Math.floor(diasAtraso / 30) + 1
+            montoMora = (factura.saldo_pendiente_usd || 0) * (interesMoratorio / 100) * periods
+        }
+
+        const montoBaseUSD = factura.saldo_pendiente_usd || 0
+        const montoUSD = montoBaseUSD + montoMora
         const montoBS = montoUSD * tasaCambio
 
         let texto = `Hola ${cliente.nombre}, reciba un cordial saludo.\n\n` +
-            `Le recordamos que la factura #${factura.id} emitida el ${fechaEmi} y con vencimiento el ${fechaVenc} presenta un saldo pendiente de $${formatNumberVE(montoUSD, 2)} USD (${formatBs(montoBS)}).\n\n` +
-            'Por favor proceda con el pago a la brevedad. Muchas gracias.'
+            `Le recordamos que la factura #${factura.id} emitida el ${fechaEmi} y con vencimiento el ${fechaVenc} presenta un saldo pendiente de $${formatNumberVE(montoUSD, 2)} USD (${formatBs(montoBS)}).\n\n`
+            
+        if (montoMora > 0) {
+            texto += `*Nota:* Este monto incluye $${formatNumberVE(montoMora, 2)} USD por concepto de intereses moratorios al tener ${Math.floor((new Date().getTime() - fechaVencDate.getTime()) / (24 * 60 * 60 * 1000))} días de atraso.\n\n`
+        }
+
+        texto += 'Por favor proceda con el pago a la brevedad. Muchas gracias.'
 
         const { normalized, valid } = normalizePhoneVE(cliente.telefono || '')
         const waLink = valid ? `https://wa.me/${normalized}?text=${encodeURIComponent(texto)}` : `https://wa.me/?text=${encodeURIComponent(texto)}`
@@ -278,6 +296,19 @@ export default function Clientes({ clientes, setClientes, externalEditCliente, s
                             />
                         </div>
 
+                        <div className="form-group">
+                            <label className="form-label">Permite Crédito *</label>
+                            <select
+                                className="form-select"
+                                value={formData.permite_credito ? 'si' : 'no'}
+                                onChange={(e) => setFormData({ ...formData, permite_credito: e.target.value === 'si' })}
+                                required
+                            >
+                                <option value="si">Sí</option>
+                                <option value="no">No</option>
+                            </select>
+                        </div>
+
                         <div className="flex flex-gap mt-4">
                             <button type="submit" className="btn btn-primary">
                                 {editando ? 'Actualizar Cliente' : 'Guardar Cliente'}
@@ -328,12 +359,24 @@ export default function Clientes({ clientes, setClientes, externalEditCliente, s
                                             const creditDays = diasCredito || 7
                                             const vencimiento = new Date(new Date(f.fecha).getTime() + creditDays * 24 * 60 * 60 * 1000)
                                             const estaVencida = vencimiento < new Date()
+                                            
+                                            let montoMora = 0;
+                                            if (estaVencida && interesMoratorio > 0 && (f.tipo_precio === 'credito' || !f.tipo_precio)) {
+                                                const diasAtraso = Math.floor((new Date().getTime() - vencimiento.getTime()) / (24 * 60 * 60 * 1000));
+                                                const periods = Math.floor(diasAtraso / 30) + 1;
+                                                montoMora = (f.saldo_pendiente_usd || 0) * (interesMoratorio / 100) * periods;
+                                            }
+                                            const totalDeudaUSD = (f.saldo_pendiente_usd || 0) + montoMora;
+                                            
                                             return (
                                                 <tr key={f.id}>
                                                     <td>#{f.id}</td>
                                                     <td>{formatDateDDMMYYYY(f.fecha)}</td>
-                                                    <td>${(f.saldo_pendiente_usd || 0).toFixed(2)}</td>
-                                                    <td>{formatBs((f.saldo_pendiente_usd || 0) * tasaCambio)}</td>
+                                                    <td>
+                                                        ${totalDeudaUSD.toFixed(2)}
+                                                        {montoMora > 0 && <span className="text-danger text-small block">(Incl. ${montoMora.toFixed(2)} mora)</span>}
+                                                    </td>
+                                                    <td>{formatBs(totalDeudaUSD * tasaCambio)}</td>
                                                     <td>
                                                         {estaVencida ? (
                                                             <button className="btn btn-sm btn-warning" onClick={() => enviarRecordatorio(f, selectedClient)}>
@@ -419,7 +462,7 @@ export default function Clientes({ clientes, setClientes, externalEditCliente, s
                     </div>
                     <button
                         className="btn btn-primary"
-                        onClick={() => { setEditando(null); setFormData({ nombre: '', telefono: '', direccion: '' }); setVistaActiva('formulario') }}
+                        onClick={() => { setEditando(null); setFormData({ nombre: '', telefono: '', direccion: '', permite_credito: false }); setVistaActiva('formulario') }}
                     >
                         + Nuevo Cliente
                     </button>
@@ -463,6 +506,7 @@ export default function Clientes({ clientes, setClientes, externalEditCliente, s
                                         <th onClick={() => handleSort('direccion')} style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}>
                                             Dirección <SortIndicator column="direccion" />
                                         </th>
+                                        <th>Crédito</th>
                                         <th>Acciones</th>
                                     </tr>
                                 </thead>
@@ -472,6 +516,11 @@ export default function Clientes({ clientes, setClientes, externalEditCliente, s
                                             <td>{cliente.nombre}</td>
                                             <td>{formatPhoneForDisplay(cliente.telefono) || cliente.telefono || 'N/A'}</td>
                                             <td>{cliente.direccion}</td>
+                                            <td>
+                                                <span className={`badge ${cliente.permite_credito !== false ? 'badge-success' : 'badge-danger'}`}>
+                                                    {cliente.permite_credito !== false ? 'Sí' : 'No'}
+                                                </span>
+                                            </td>
                                             <td>
                                                 <div className="flex flex-gap">
                                                     <button
@@ -485,7 +534,16 @@ export default function Clientes({ clientes, setClientes, externalEditCliente, s
                                                         onClick={() => {
                                                             const pendientes = facturas.filter(f => f.cliente_id === cliente.id && f.saldo_pendiente_usd > 0)
                                                             setFacturasPendientesCliente(pendientes)
-                                                            const total = pendientes.reduce((s, it) => s + (it.saldo_pendiente_usd || 0), 0)
+                                                            const total = pendientes.reduce((s, f) => {
+                                                                let mora = 0;
+                                                                const venc = new Date(new Date(f.fecha).getTime() + (diasCredito || 7) * 24 * 60 * 60 * 1000);
+                                                                if (new Date() > venc && interesMoratorio > 0 && (f.tipo_precio === 'credito' || !f.tipo_precio)) {
+                                                                    const atraso = Math.floor((new Date().getTime() - venc.getTime()) / (24 * 60 * 60 * 1000));
+                                                                    const per = Math.floor(atraso / 30) + 1;
+                                                                    mora = (f.saldo_pendiente_usd || 0) * (interesMoratorio / 100) * per;
+                                                                }
+                                                                return s + (f.saldo_pendiente_usd || 0) + mora;
+                                                            }, 0)
                                                             setFacturasPendientesTotalUSD(total)
                                                             setSelectedClienteId(cliente.id)
                                                             setVistaActiva('facturas')

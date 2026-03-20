@@ -164,6 +164,7 @@ function App() {
     const [brechaBase, setBrechaBase] = useState(0) // Brecha del dólar paralelo vs oficial (%)
     const [porcentajeCredito, setPorcentajeCredito] = useState(10) // Porcentaje recargo crédito (%)
     const [diasCredito, setDiasCredito] = useState(15) // Días de crédito por defecto
+    const [interesMoratorio, setInteresMoratorio] = useState(0) // Porcentaje recargo por mora (%)
     const [deliveryDate, setDeliveryDate] = useState(() => {
         const saved = localStorage.getItem('deliveryDate')
         if (saved) return saved
@@ -240,6 +241,7 @@ function App() {
                 const savedBrecha = localStorage.getItem('brecha')
                 const savedPorcentajeCredito = localStorage.getItem('porcentajeCredito')
                 const savedDiasCredito = localStorage.getItem('diasCredito')
+                const savedInteresMoratorio = localStorage.getItem('interesMoratorio')
                 const savedCompras = localStorage.getItem('compras')
 
                 if (savedClientes) setClientes(JSON.parse(savedClientes))
@@ -258,6 +260,7 @@ function App() {
                 if (savedBrecha) setBrecha(parseFloat(savedBrecha))
                 if (savedPorcentajeCredito) setPorcentajeCredito(parseFloat(savedPorcentajeCredito))
                 if (savedDiasCredito) setDiasCredito(parseInt(savedDiasCredito))
+                if (savedInteresMoratorio) setInteresMoratorio(parseFloat(savedInteresMoratorio))
                 if (savedCompras) setCompras(JSON.parse(savedCompras))
                 const savedPedidos = localStorage.getItem('pedidos')
                 if (savedPedidos) setPedidos(JSON.parse(savedPedidos))
@@ -409,6 +412,12 @@ function App() {
 
     useEffect(() => {
         if (isLoaded) {
+            localStorage.setItem('interesMoratorio', interesMoratorio.toString())
+        }
+    }, [interesMoratorio, isLoaded])
+
+    useEffect(() => {
+        if (isLoaded) {
             localStorage.setItem('pedidos', JSON.stringify(pedidos))
         }
     }, [pedidos, isLoaded])
@@ -464,6 +473,8 @@ function App() {
                         setExternalEditCliente={setExternalEditCliente}
                         facturas={facturas}
                         tasaCambio={tasaCambio}
+                        diasCredito={diasCredito}
+                        interesMoratorio={interesMoratorio}
                     />
                 )
             case 'productos':
@@ -508,6 +519,7 @@ function App() {
                         setFacturaADetalle={setFacturaADetalle}
                         porcentajeCredito={porcentajeCredito}
                         diasCredito={diasCredito}
+                        interesMoratorio={interesMoratorio}
                         onPagarFactura={(factura) => {
                             setFacturaAPagar(factura)
                             setCurrentView('pagos')
@@ -525,6 +537,8 @@ function App() {
                         clientes={clientes}
                         facturaAPagar={facturaAPagar}
                         setFacturaAPagar={setFacturaAPagar}
+                        diasCredito={diasCredito}
+                        interesMoratorio={interesMoratorio}
                     />
                 )
             case 'mensajeria':
@@ -564,6 +578,8 @@ function App() {
                         setPorcentajeCredito={setPorcentajeCredito}
                         diasCredito={diasCredito}
                         setDiasCredito={setDiasCredito}
+                        interesMoratorio={interesMoratorio}
+                        setInteresMoratorio={setInteresMoratorio}
                     />
                 )
             case 'vendedores':
