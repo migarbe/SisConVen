@@ -20,7 +20,8 @@ export default function Pagos({ pagos, setPagos, facturas, setFacturas, tasaCamb
         if (facturaAPagar) {
             let montoMora = 0;
             const fechaVencDate = new Date(new Date(facturaAPagar.fecha).getTime() + (diasCredito * 24 * 60 * 60 * 1000));
-            if (new Date() > fechaVencDate && interesMoratorio > 0 && (facturaAPagar.tipo_precio === 'credito' || !facturaAPagar.tipo_precio)) {
+            const esCreditoP1 = (facturaAPagar.tipo_precio === 'credito' || !facturaAPagar.tipo_precio);
+            if (new Date() > fechaVencDate && interesMoratorio > 0 && esCreditoP1) {
                 const diasAtraso = Math.floor((new Date().getTime() - fechaVencDate.getTime()) / (24 * 60 * 60 * 1000));
                 const periods = Math.floor(diasAtraso / 30) + 1;
                 montoMora = (facturaAPagar.saldo_pendiente_usd || 0) * (interesMoratorio / 100) * periods;
@@ -60,7 +61,8 @@ export default function Pagos({ pagos, setPagos, facturas, setFacturas, tasaCamb
 
         let montoMora = 0;
         const fechaVencDate = new Date(new Date(factura.fecha).getTime() + (diasCredito * 24 * 60 * 60 * 1000));
-        if (new Date() > fechaVencDate && interesMoratorio > 0 && (factura.tipo_precio === 'credito' || !factura.tipo_precio)) {
+        const esCreditoP2 = (factura.tipo_precio === 'credito' || !factura.tipo_precio);
+        if (new Date() > fechaVencDate && interesMoratorio > 0 && esCreditoP2) {
             const diasAtraso = Math.floor((new Date().getTime() - fechaVencDate.getTime()) / (24 * 60 * 60 * 1000));
             const periods = Math.floor(diasAtraso / 30) + 1;
             montoMora = (factura.saldo_pendiente_usd || 0) * (interesMoratorio / 100) * periods;
@@ -346,7 +348,8 @@ export default function Pagos({ pagos, setPagos, facturas, setFacturas, tasaCamb
 
                                     let mMora = 0;
                                     const vDate = new Date(new Date(factura.fecha).getTime() + (diasCredito * 24 * 60 * 60 * 1000));
-                                    if (new Date() > vDate && interesMoratorio > 0 && (factura.tipo_precio === 'credito' || !factura.tipo_precio)) {
+                                    const esCreditoP3 = (factura.tipo_precio === 'credito' || !factura.tipo_precio);
+                                    if (new Date() > vDate && interesMoratorio > 0 && esCreditoP3) {
                                         const dAtraso = Math.floor((new Date().getTime() - vDate.getTime()) / (24 * 60 * 60 * 1000));
                                         mMora = (factura.saldo_pendiente_usd || 0) * (interesMoratorio / 100) * (Math.floor(dAtraso / 30) + 1);
                                     }
@@ -366,7 +369,8 @@ export default function Pagos({ pagos, setPagos, facturas, setFacturas, tasaCamb
                         {facturaSeleccionada && (() => {
                             let mMora = 0;
                             const vDate = new Date(new Date(facturaSeleccionada.fecha).getTime() + (diasCredito * 24 * 60 * 60 * 1000));
-                            if (new Date() > vDate && interesMoratorio > 0 && (facturaSeleccionada.tipo_precio === 'credito' || !facturaSeleccionada.tipo_precio)) {
+                            const esCreditoP4 = (facturaSeleccionada.tipo_precio === 'credito' || !facturaSeleccionada.tipo_precio);
+                            if (new Date() > vDate && interesMoratorio > 0 && esCreditoP4) {
                                 const dAtraso = Math.floor((new Date().getTime() - vDate.getTime()) / (24 * 60 * 60 * 1000));
                                 mMora = (facturaSeleccionada.saldo_pendiente_usd || 0) * (interesMoratorio / 100) * (Math.floor(dAtraso / 30) + 1);
                             }

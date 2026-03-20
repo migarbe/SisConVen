@@ -111,7 +111,9 @@ export default function Clientes({ clientes, setClientes, externalEditCliente, s
         const fechaVenc = formatDateDDMMYYYY(fechaVencDate)
         let montoMora = 0;
         
-        if (new Date() > fechaVencDate && interesMoratorio > 0 && (factura.tipo_precio === 'credito' || !factura.tipo_precio)) {
+        const esFacturaCredito = (factura.tipo_precio === 'credito' || !factura.tipo_precio);
+        
+        if (new Date() > fechaVencDate && interesMoratorio > 0 && esFacturaCredito) {
             const diasAtraso = Math.floor((new Date().getTime() - fechaVencDate.getTime()) / (24 * 60 * 60 * 1000))
             const periods = Math.floor(diasAtraso / 30) + 1
             montoMora = (factura.saldo_pendiente_usd || 0) * (interesMoratorio / 100) * periods
@@ -537,7 +539,8 @@ export default function Clientes({ clientes, setClientes, externalEditCliente, s
                                                             const total = pendientes.reduce((s, f) => {
                                                                 let mora = 0;
                                                                 const venc = new Date(new Date(f.fecha).getTime() + (diasCredito || 7) * 24 * 60 * 60 * 1000);
-                                                                if (new Date() > venc && interesMoratorio > 0 && (f.tipo_precio === 'credito' || !f.tipo_precio)) {
+                                                                                                                                 const esCr = (f.tipo_precio === 'credito' || !f.tipo_precio);
+                                                                 if (new Date() > venc && interesMoratorio > 0 && esCr) {
                                                                     const atraso = Math.floor((new Date().getTime() - venc.getTime()) / (24 * 60 * 60 * 1000));
                                                                     const per = Math.floor(atraso / 30) + 1;
                                                                     mora = (f.saldo_pendiente_usd || 0) * (interesMoratorio / 100) * per;

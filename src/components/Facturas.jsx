@@ -519,7 +519,7 @@ export default function Facturas({ facturas, setFacturas, pedidos, setPedidos, c
         setFormData({
             cliente_id: String(factura.cliente_id),
             vendedor_id: String(factura.vendedor_id || ''),
-            tipo_precio: factura.tipo_precio || (factura.items[0]?.tipo_precio) || 'contado',
+            tipo_precio: factura.tipo_precio || 'credito', // Facturas antiguas eran implícitamente crédito
             items: factura.items.map(it => ({ ...it }))
         })
         setEditandoFactura(factura.id)
@@ -556,7 +556,9 @@ export default function Facturas({ facturas, setFacturas, pedidos, setPedidos, c
         }).join('\n')
 
         let montoMora = 0;
-        if (new Date() > fechaVencimiento && interesMoratorio > 0 && (factura.tipo_precio === 'credito' || !factura.tipo_precio)) {
+        const esFacturaCredito = (factura.tipo_precio === 'credito' || !factura.tipo_precio);
+        
+        if (new Date() > fechaVencimiento && interesMoratorio > 0 && esFacturaCredito) {
             const diasAtraso = Math.floor((new Date().getTime() - fechaVencimiento.getTime()) / (24 * 60 * 60 * 1000))
             const periods = Math.floor(diasAtraso / 30) + 1
             montoMora = (factura.saldo_pendiente_usd || 0) * (interesMoratorio / 100) * periods
@@ -957,7 +959,9 @@ export default function Facturas({ facturas, setFacturas, pedidos, setPedidos, c
                                 {(() => {
                                     let mMora = 0;
                                     const vDate = new Date(new Date(detalleFactura.fecha).getTime() + (diasCredito * 24 * 60 * 60 * 1000));
-                                    if (new Date() > vDate && interesMoratorio > 0 && (detalleFactura.tipo_precio === 'credito' || !detalleFactura.tipo_precio) && detalleFactura.estado !== 'Pagada') {
+                                    const esCreditoD = (detalleFactura.tipo_precio === 'credito' || !detalleFactura.tipo_precio);
+
+                                    if (new Date() > vDate && interesMoratorio > 0 && esCreditoD && detalleFactura.estado !== 'Pagada') {
                                         const dAtraso = Math.floor((new Date().getTime() - vDate.getTime()) / (24 * 60 * 60 * 1000));
                                         mMora = (detalleFactura.saldo_pendiente_usd || 0) * (interesMoratorio / 100) * (Math.floor(dAtraso / 30) + 1);
                                     }
@@ -1121,7 +1125,9 @@ export default function Facturas({ facturas, setFacturas, pedidos, setPedidos, c
                                                     {(() => {
                                                         let mMora = 0;
                                                         const vDate = new Date(new Date(factura.fecha).getTime() + (diasCredito * 24 * 60 * 60 * 1000));
-                                                        if (new Date() > vDate && interesMoratorio > 0 && (factura.tipo_precio === 'credito' || !factura.tipo_precio) && factura.estado !== 'Pagada') {
+                                                        const esCreditoL = (factura.tipo_precio === 'credito' || !factura.tipo_precio);
+
+                                                        if (new Date() > vDate && interesMoratorio > 0 && esCreditoL && factura.estado !== 'Pagada') {
                                                             const dAtraso = Math.floor((new Date().getTime() - vDate.getTime()) / (24 * 60 * 60 * 1000));
                                                             mMora = (factura.saldo_pendiente_usd || 0) * (interesMoratorio / 100) * (Math.floor(dAtraso / 30) + 1);
                                                         }
