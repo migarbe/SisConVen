@@ -131,7 +131,7 @@ export default function Vendedores({ vendedores, setVendedores, productos, factu
 
     const calcularComisionesVendedor = (vendedorId) => {
         if (!facturas || facturas.length === 0) {
-            return { total: 0, facturas: [] }
+            return { total: 0, totalGenerado: 0, totalPagado: 0, facturas: [], facturasPendientes: [] }
         }
 
         const vendedor = vendedores.find(v => v.id.toString() === vendedorId.toString())
@@ -146,11 +146,22 @@ export default function Vendedores({ vendedores, setVendedores, productos, factu
         // Total pendiente = generado - pagado
         const totalPendiente = parseFloat(Math.max(0, totalGenerado - totalPagado).toFixed(2))
 
+        // Facturas pendientes
+        const idsFacturasPagadas = new Set();
+        (vendedor?.pagos_comisiones || []).forEach(pago => {
+            if (pago.facturas) {
+                pago.facturas.forEach(f => idsFacturasPagadas.add(f.id));
+            }
+        });
+
+        const facturasPendientes = facturasVendedor.filter(f => !idsFacturasPagadas.has(f.id));
+
         return {
             total: totalPendiente,
             totalGenerado,
             totalPagado,
-            facturas: facturasVendedor
+            facturas: facturasVendedor,
+            facturasPendientes
         }
     }
 
@@ -215,7 +226,7 @@ export default function Vendedores({ vendedores, setVendedores, productos, factu
             tasa_cambio: tasaCambio,
             monto_bs,
             referencia: referenciaPago,
-            facturas: comisionesData.facturas.map(f => ({
+            facturas: comisionesData.facturasPendientes.map(f => ({
                 id: f.id,
                 comision: f.comisiones_total,
                 detalle: f.comisiones_detalle
@@ -243,34 +254,19 @@ export default function Vendedores({ vendedores, setVendedores, productos, factu
     const generarMensajePago = (vendedor, pago, comisionesData) => {
         const fechaPago = formatDateDDMMYYYY(pago.fecha)
 
-        // Agrupar comisiones por producto
-        const productosTotales = {}
-        comisionesData.facturas.forEach(factura => {
-            factura.comisiones_detalle?.forEach(det => {
-                if (!productosTotales[det.nombre]) {
-                    productosTotales[det.nombre] = 0
-                }
-                productosTotales[det.nombre] += det.comision
-            })
-        })
-
-        const resumenProductos = Object.entries(productosTotales)
-            .map(([nombre, total]) => `  • ${nombre}: $${total.toFixed(2)} USD`)
+        const resumenFacturas = pago.facturas
+            .map(f => `  • Factura #${f.id}: $${f.comision.toFixed(2)} USD`)
             .join('\n')
 
         const mensaje = `*Pago de Comisiones*\n\n` +
             `Hola ${vendedor.nombre}, se ha procesado el pago de tus comisiones:\n\n` +
             `*Fecha:* ${fechaPago}\n` +
-            `*Facturas procesadas:* ${comisionesData.facturas.length}\n\n` +
-            `*Resumen por producto:*\n${resumenProductos}\n\n` +
+            `*Facturas procesadas:* ${pago.facturas.length}\n\n` +
+            `*Detalle de facturas:*\n${resumenFacturas}\n\n` +
             `*Total en USD:* $${pago.monto_usd.toFixed(2)}\n` +
             `*Tasa de cambio:* ${pago.tasa_cambio.toFixed(2)} Bs/USD\n` +
             `*Total en Bolívares:* ${formatBs(pago.monto_bs)}\n\n` +
             `*Referencia bancaria:* ${pago.referencia}\n\n` +
-            `*Datos para Pago Móvil:*\n` +
-            `• Teléfono: ${vendedor.telefono || 'N/A'}\n` +
-            `• Cédula: ${vendedor.cedula || 'N/A'}\n` +
-            `• Banco: ${vendedor.banco || 'N/A'}\n\n` +
             `Gracias por tu trabajo. ¡Sigue así!`
 
         const telefonoRaw = vendedor?.telefono || ''
@@ -401,8 +397,8 @@ export default function Vendedores({ vendedores, setVendedores, productos, factu
                                                             comision?.valor || 0
                                                         )}
                                                     >
-                                                        <option value="porcentaje">Porcentaje (%)</option>
                                                         <option value="monto">Monto fijo (USD)</option>
+                                                        <option value="porcentaje">Porcentaje (%)</option>
                                                     </select>
                                                 </div>
 
@@ -536,8 +532,8 @@ export default function Vendedores({ vendedores, setVendedores, productos, factu
                         <p className="card-subtitle">Listado de facturas que generaron comisiones</p>
                     </div>
                     <div className="table-container">
-                        {comisionesData.facturas.length === 0 ? (
-                            <p className="p-4 text-center text-muted">No hay facturas registradas para este vendedor.</p>
+                        {comisionesData.facturasPendientes.length === 0 ? (
+                            <p className="p-4 text-center text-muted">No hay facturas pendientes para este vendedor.</p>
                         ) : (
                             <table className="table">
                                 <thead>
@@ -550,7 +546,7 @@ export default function Vendedores({ vendedores, setVendedores, productos, factu
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {comisionesData.facturas.map((factura) => (
+                                    {comisionesData.facturasPendientes.map((factura) => (
                                         <tr key={factura.id}>
                                             <td><strong>#{factura.id}</strong></td>
                                             <td>{formatDateDDMMYYYY(factura.fecha)}</td>

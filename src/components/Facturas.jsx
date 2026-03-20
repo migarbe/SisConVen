@@ -602,7 +602,7 @@ export default function Facturas({ facturas, setFacturas, pedidos, setPedidos, c
                                 required
                             >
                                 <option value="">Seleccionar cliente...</option>
-                                {clientes.map((cliente) => (
+                                {[...clientes].sort((a, b) => a.nombre.localeCompare(b.nombre)).map((cliente) => (
                                     <option key={cliente.id} value={cliente.id}>
                                         {cliente.nombre}
                                     </option>
@@ -618,7 +618,7 @@ export default function Facturas({ facturas, setFacturas, pedidos, setPedidos, c
                                 onChange={(e) => setFormData({ ...formData, vendedor_id: e.target.value })}
                             >
                                 <option value="">Sin vendedor asignado</option>
-                                {vendedores?.map((vendedor) => (
+                                {[...(vendedores || [])].sort((a, b) => a.nombre.localeCompare(b.nombre)).map((vendedor) => (
                                     <option key={vendedor.id} value={vendedor.id}>
                                         {vendedor.nombre}
                                     </option>
@@ -683,7 +683,7 @@ export default function Facturas({ facturas, setFacturas, pedidos, setPedidos, c
                                         onChange={(e) => setItemActual({ ...itemActual, producto_id: e.target.value })}
                                     >
                                         <option value="">Seleccionar...</option>
-                                        {productos.map((producto) => (
+                                        {[...productos].sort((a, b) => a.nombre.localeCompare(b.nombre)).map((producto) => (
                                             <option key={producto.id} value={producto.id}>
                                                 {producto.nombre} - ${producto.precio_usd.toFixed(2)} ({formatNumberVE(producto.cantidad_kg || 0, 3)} Kg disponible)
                                             </option>
@@ -729,8 +729,8 @@ export default function Facturas({ facturas, setFacturas, pedidos, setPedidos, c
                                         value={itemActual.comision_tipo}
                                         onChange={(e) => setItemActual({ ...itemActual, comision_tipo: e.target.value })}
                                     >
-                                        <option value="porcentaje">Porcentaje (%)</option>
                                         <option value="fijo">Monto Fijo (USD)</option>
+                                        <option value="porcentaje">Porcentaje (%)</option>
                                     </select>
                                 </div>
                                 <div className="form-group" style={{ marginBottom: 0 }}>

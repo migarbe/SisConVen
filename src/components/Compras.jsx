@@ -315,7 +315,7 @@ export default function Compras({ compras, setCompras, productos, setProductos, 
                                         onChange={e => setItemActual({ ...itemActual, producto_id: e.target.value })}
                                     >
                                         <option value="">Seleccione...</option>
-                                        {productos.map(p => (
+                                        {[...productos].sort((a, b) => a.nombre.localeCompare(b.nombre)).map(p => (
                                             <option key={p.id} value={p.id}>{p.nombre}</option>
                                         ))}
                                     </select>
@@ -548,11 +548,11 @@ export default function Compras({ compras, setCompras, productos, setProductos, 
                                         value={pagoData.metodo}
                                         onChange={e => setPagoData({ ...pagoData, metodo: e.target.value })}
                                     >
-                                        <option value="Efectivo">Efectivo</option>
-                                        <option value="Zelle">Zelle</option>
                                         <option value="Binance">Binance</option>
-                                        <option value="Transferencia">Transferencia</option>
+                                        <option value="Efectivo">Efectivo</option>
                                         <option value="Pago Móvil">Pago Móvil</option>
+                                        <option value="Transferencia">Transferencia</option>
+                                        <option value="Zelle">Zelle</option>
                                     </select>
                                 </div>
                                 <div className="form-group mb-4">

@@ -271,8 +271,8 @@ export default function Productos({ productos, setProductos, brechaGlobal, porce
                                         value={formData.comision_tipo}
                                         onChange={(e) => setFormData({ ...formData, comision_tipo: e.target.value })}
                                     >
-                                        <option value="porcentaje">Porcentual (%)</option>
                                         <option value="fijo">Fijo (USD)</option>
+                                        <option value="porcentaje">Porcentual (%)</option>
                                     </select>
                                     <input
                                         type="number"
@@ -292,8 +292,8 @@ export default function Productos({ productos, setProductos, brechaGlobal, porce
                                         value={formData.ganancia_tipo}
                                         onChange={(e) => setFormData({ ...formData, ganancia_tipo: e.target.value })}
                                     >
-                                        <option value="porcentaje">Porcentual (%)</option>
                                         <option value="fijo">Fijo (USD)</option>
+                                        <option value="porcentaje">Porcentual (%)</option>
                                     </select>
                                     <input
                                         type="number"

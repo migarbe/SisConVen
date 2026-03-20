@@ -163,10 +163,10 @@ export default function Mensajeria({ clientes, facturas, tasaCambio, productos =
                             required
                         >
                             <option value="">Seleccionar tipo...</option>
+                            <option value="detalles_pago">Detalles de Pago</option>
+                            <option value="agradecimiento">Mensaje de Agradecimiento</option>
                             <option value="cobro">Mensaje de Cobro</option>
                             <option value="pedido">Mensaje de Pedido (General)</option>
-                            <option value="agradecimiento">Mensaje de Agradecimiento</option>
-                            <option value="detalles_pago">Detalles de Pago</option>
                         </select>
                     </div>
 

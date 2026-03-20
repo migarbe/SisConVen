@@ -234,7 +234,7 @@ export default function MensajeGenerator({
                                 onChange={(e) => setTipoMensaje(e.target.value)}
                             >
                                 <option value="">Seleccionar tipo...</option>
-                                {mensajesDisponibles.map(mensaje => (
+                                {[...mensajesDisponibles].sort((a, b) => a.nombre.localeCompare(b.nombre)).map(mensaje => (
                                     <option key={mensaje.id} value={mensaje.tipo}>
                                         {mensaje.nombre} ({mensaje.tipo})
                                     </option>
@@ -251,7 +251,7 @@ export default function MensajeGenerator({
                                     onChange={(e) => setClienteSeleccionado(e.target.value)}
                                 >
                                     <option value="">Todos los clientes</option>
-                                    {clientes.map(cliente => (
+                                    {[...clientes].sort((a, b) => a.nombre.localeCompare(b.nombre)).map(cliente => (
                                         <option key={cliente.id} value={cliente.id}>
                                             {cliente.nombre}
                                         </option>
@@ -269,7 +269,7 @@ export default function MensajeGenerator({
                                     onChange={(e) => setFacturaSeleccionada(e.target.value)}
                                 >
                                     <option value="">Todas las facturas</option>
-                                    {facturas.map(factura => (
+                                    {[...facturas].sort((a, b) => (a.cliente_nombre || '').localeCompare(b.cliente_nombre || '')).map(factura => (
                                         <option key={factura.id} value={factura.id}>
                                             #{factura.id} - {factura.cliente_nombre || 'Cliente'}
                                         </option>
@@ -287,7 +287,7 @@ export default function MensajeGenerator({
                                     onChange={(e) => setProductoSeleccionado(e.target.value)}
                                 >
                                     <option value="">Todos los productos</option>
-                                    {productos.map(producto => (
+                                    {[...productos].sort((a, b) => a.nombre.localeCompare(b.nombre)).map(producto => (
                                         <option key={producto.id} value={producto.id}>
                                             {producto.nombre}
                                         </option>

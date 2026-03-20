@@ -181,7 +181,7 @@ export default function MensajeManager({ onSeleccionarMensaje }) {
                                 onChange={(e) => setTipoFiltro(e.target.value)}
                             >
                                 <option value="todos">Todos los tipos</option>
-                                {tiposUnicos.map(tipo => (
+                                {[...tiposUnicos].sort((a, b) => a.localeCompare(b)).map(tipo => (
                                     <option key={tipo} value={tipo}>{tipo}</option>
                                 ))}
                             </select>

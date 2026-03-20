@@ -292,7 +292,10 @@ export default function Pedidos({ pedidos, setPedidos, clientes, productos, tasa
                                         onChange={(e) => setCurrentItem({ ...currentItem, producto_id: e.target.value })}
                                     >
                                         <option value="">Seleccionar producto...</option>
-                                        {productos.filter(p => (p.cantidad_kg || 0) > 0).map(p => (
+                                        {[...productos]
+                                            .filter(p => (p.cantidad_kg || 0) > 0)
+                                            .sort((a, b) => a.nombre.localeCompare(b.nombre))
+                                            .map(p => (
                                             <option key={p.id} value={p.id}>{p.nombre} ({formatNumberVE(p.cantidad_kg, 1)} Kg disp.)</option>
                                         ))}
                                     </select>

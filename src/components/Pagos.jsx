@@ -313,7 +313,11 @@ export default function Pagos({ pagos, setPagos, facturas, setFacturas, tasaCamb
                                 disabled={!!editandoPago}
                             >
                                 <option value="">Seleccionar factura...</option>
-                                {facturas.map((factura) => {
+                                {[...facturas].sort((a, b) => {
+                                    const clienteA = clientes.find(c => c.id === a.cliente_id)?.nombre || '';
+                                    const clienteB = clientes.find(c => c.id === b.cliente_id)?.nombre || '';
+                                    return clienteA.localeCompare(clienteB);
+                                }).map((factura) => {
                                     // En modo edición mostramos todas las del cliente, en modo nuevo solo las pendientes
                                     if (!editandoPago && factura.saldo_pendiente_usd <= 0) return null;
 
@@ -356,11 +360,11 @@ export default function Pagos({ pagos, setPagos, facturas, setFacturas, tasaCamb
                                 onChange={(e) => setFormData({ ...formData, forma_pago: e.target.value })}
                                 required
                             >
+                                <option value="Divisas">Divisas</option>
+                                <option value="Efectivo">Efectivo</option>
+                                <option value="Otros">Otros</option>
                                 <option value="Pago Movil">Pago Movil</option>
                                 <option value="Transferencia Bancaria">Transferencia Bancaria</option>
-                                <option value="Efectivo">Efectivo</option>
-                                <option value="Divisas">Divisas</option>
-                                <option value="Otros">Otros</option>
                             </select>
                         </div>
 

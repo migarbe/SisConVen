@@ -16,7 +16,7 @@ const CURRENCY_FLAGS = {
     VES: '🇻🇪'
 }
 
-const CURRENCIES = ['USD', 'COP', 'VES']
+const CURRENCIES = ['COP', 'USD', 'VES']
 
 const CURRENCY_NAMES = {
     USD: 'Dólar Estadounidense',
