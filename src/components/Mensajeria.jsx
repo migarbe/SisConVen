@@ -93,7 +93,7 @@ export default function Mensajeria({ clientes, facturas, tasaCambio, productos =
             }
 
             const creditDays = diasCredito || 7
-            texto += `_El crédito es por ${creditDays} días_\n\n`
+            //texto += `_El crédito es por ${creditDays} días_\n\n`
             texto += 'Estamos a su disposición para cualquier consulta o pedido. ¡Que tengan un excelente día!'
         } else if (tipoMensaje === 'agradecimiento') {
             texto += `Hola ${cliente.nombre}, reciba un cordial saludo,` + '\n\n'

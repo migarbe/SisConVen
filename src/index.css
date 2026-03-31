@@ -984,3 +984,58 @@ h6 {
     border-radius: 0;
   }
 }
+
+/* Calculation Steps Styles */
+.calculation-step {
+  animation: slideUp 0.3s ease-out;
+}
+
+.calculation-box {
+  transition: all var(--transition-base);
+  border: 1px solid var(--border-color);
+}
+
+.calculation-box:hover {
+  border-color: var(--accent-primary);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.calculation-step .badge {
+  font-size: 0.7rem;
+  padding: 0.25rem 0.5rem;
+  background: var(--accent-gradient);
+  color: white;
+}
+
+.calculation-step .badge-success {
+  background: var(--success);
+}
+
+/* Responsive adjustments for calculation boxes */
+@media (max-width: 1024px) {
+  .calculation-box .flex-between {
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+  }
+  
+  .calculation-box .flex-between > div {
+    flex: 1 1 calc(50% - var(--spacing-md));
+    text-align: center !important;
+  }
+  
+  .calculation-box .text-primary.mx-3 {
+    position: absolute;
+    opacity: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .calculation-box .flex-between > div {
+    flex: 1 1 100%;
+  }
+  
+  .calculation-box .text-primary.mx-3 {
+    display: none;
+  }
+}

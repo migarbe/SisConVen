@@ -306,19 +306,259 @@ export default function Productos({ productos, setProductos, brechaGlobal, porce
                             </div>
                         </div>
 
-                        <div className="card border-primary p-3 mt-3 mb-4 bg-primary-light">
-                            <div className="grid grid-3 text-center">
-                                <div>
-                                    <div className="text-small text-muted">Precio de Contado</div>
-                                    <div className="stat-value text-primary">${(formData.precio_usd || 0).toFixed(2)} USD</div>
+                        {/* Cálculo Detallado del Precio */}
+                        <div className="card border-primary p-4 mt-3 mb-4 bg-primary-light">
+                            <h4 className="mb-3 text-primary">
+                                <TrendingUpIcon style={{ verticalAlign: 'middle', marginRight: '8px' }} />
+                                Cálculo Detallado del Precio
+                            </h4>
+                            
+                            {/* Tasas de Cambio */}
+                            <div className="card bg-white p-3 mb-3">
+                                <h5 className="mb-2" style={{ fontSize: '0.95rem' }}>Tasas de Cambio Actuales</h5>
+                                <div className="grid grid-3 text-center">
+                                    <div className="p-2 bg-light rounded">
+                                        <div className="text-small text-muted">USD → VES</div>
+                                        <div className="stat-value" style={{ fontSize: '1rem' }}>
+                                            {exchangeRates['VES'] ? exchangeRates['VES'].toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '---'}
+                                        </div>
+                                    </div>
+                                    <div className="p-2 bg-light rounded">
+                                        <div className="text-small text-muted">USD → COP</div>
+                                        <div className="stat-value" style={{ fontSize: '1rem' }}>
+                                            {exchangeRates['COP'] ? exchangeRates['COP'].toLocaleString('es-VE', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : '---'}
+                                        </div>
+                                    </div>
+                                    <div className="p-2 bg-light rounded">
+                                        <div className="text-small text-muted">Brecha Global</div>
+                                        <div className="stat-value text-primary" style={{ fontSize: '1rem' }}>{brechaGlobal}%</div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <div className="text-small text-muted">Precio a Crédito (+{porcentajeCredito}%)</div>
-                                    <div className="stat-value text-success">${(formData.precio_credito || 0).toFixed(2)} USD</div>
+                            </div>
+
+                            {/* Proceso de Cálculo Paso a Paso */}
+                            <div className="card bg-white p-3 mb-3">
+                                <h5 className="mb-3" style={{ fontSize: '0.95rem' }}>Proceso de Cálculo</h5>
+                                
+                                {/* Paso 1 */}
+                                <div className="calculation-step mb-3">
+                                    <div className="flex-between items-center mb-2">
+                                        <span className="badge badge-primary">Paso 1</span>
+                                        <span className="text-muted text-small">Conversión inicial</span>
+                                    </div>
+                                    <div className="calculation-box p-3 bg-light rounded">
+                                        <div className="flex-between items-center">
+                                            <div>
+                                                <div className="text-small text-muted">PPF en COP</div>
+                                                <div className="stat-value" style={{ fontSize: '1.1rem' }}>{(parseFloat(formData.ppf_cop) || 0).toLocaleString('es-VE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} COP</div>
+                                            </div>
+                                            <div className="text-primary mx-3">
+                                                <span style={{ fontSize: '1.5rem' }}>÷</span>
+                                            </div>
+                                            <div>
+                                                <div className="text-small text-muted">Tasa COP</div>
+                                                <div className="stat-value" style={{ fontSize: '1.1rem' }}>{exchangeRates['COP'] ? exchangeRates['COP'].toLocaleString('es-VE') : '---'}</div>
+                                            </div>
+                                            <div className="text-primary mx-3">
+                                                <span style={{ fontSize: '1.5rem' }}>=</span>
+                                            </div>
+                                            <div>
+                                                <div className="text-small text-muted">PPF en USD</div>
+                                                <div className="stat-value text-primary" style={{ fontSize: '1.1rem' }}>
+                                                    ${(parseFloat(convertCurrency(parseFloat(formData.ppf_cop) || 0, 'COP', 'USD')).toFixed(2))} USD
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <div className="text-small text-muted">Brecha Global</div>
-                                    <div className="stat-value text-muted" style={{ opacity: 0.8 }}>{brechaGlobal}%</div>
+
+                                {/* Paso 2 */}
+                                <div className="calculation-step mb-3">
+                                    <div className="flex-between items-center mb-2">
+                                        <span className="badge badge-primary">Paso 2</span>
+                                        <span className="text-muted text-small">Aplicación de brecha</span>
+                                    </div>
+                                    <div className="calculation-box p-3 bg-light rounded">
+                                        <div className="flex-between items-center">
+                                            <div>
+                                                <div className="text-small text-muted">PPF en USD</div>
+                                                <div className="stat-value" style={{ fontSize: '1.1rem' }}>
+                                                    ${(parseFloat(convertCurrency(parseFloat(formData.ppf_cop) || 0, 'COP', 'USD')).toFixed(2))}
+                                                </div>
+                                            </div>
+                                            <div className="text-primary mx-3">
+                                                <span style={{ fontSize: '1.5rem' }}>×</span>
+                                            </div>
+                                            <div>
+                                                <div className="text-small text-muted">Factor Brecha ({brechaGlobal}%)</div>
+                                                <div className="stat-value" style={{ fontSize: '1.1rem' }}>1.{(parseFloat(brechaGlobal) || 0)/100}</div>
+                                            </div>
+                                            <div className="text-primary mx-3">
+                                                <span style={{ fontSize: '1.5rem' }}>=</span>
+                                            </div>
+                                            <div>
+                                                <div className="text-small text-muted">Precio Base</div>
+                                                <div className="stat-value text-primary" style={{ fontSize: '1.1rem' }}>
+                                                    ${(parseFloat(convertCurrency(parseFloat(formData.ppf_cop) || 0, 'COP', 'USD') * (1 + (parseFloat(brechaGlobal) || 0)/100)).toFixed(2))} USD
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Paso 3 */}
+                                <div className="calculation-step mb-3">
+                                    <div className="flex-between items-center mb-2">
+                                        <span className="badge badge-primary">Paso 3</span>
+                                        <span className="text-muted text-small">Comisión y Ganancia</span>
+                                    </div>
+                                    <div className="calculation-box p-3 bg-light rounded">
+                                        <div className="grid grid-2 flex-gap">
+                                            <div className="p-2 bg-white rounded border">
+                                                <div className="text-small text-muted">
+                                                    Comisión ({formData.comision_tipo === 'porcentaje' ? '%' : 'USD'})
+                                                </div>
+                                                <div className="stat-value" style={{ fontSize: '1.1rem' }}>
+                                                    {formData.comision_tipo === 'porcentaje' 
+                                                        ? `${(parseFloat(formData.comision_valor) || 0).toFixed(2)}%`
+                                                        : `$${(parseFloat(formData.comision_valor) || 0).toFixed(2)} USD`
+                                                    }
+                                                </div>
+                                                <div className="text-small text-success mt-1">
+                                                    = ${(() => {
+                                                        const base = parseFloat(convertCurrency(parseFloat(formData.ppf_cop) || 0, 'COP', 'USD') * (1 + (parseFloat(brechaGlobal) || 0)/100));
+                                                        return formData.comision_tipo === 'porcentaje'
+                                                            ? (base * (parseFloat(formData.comision_valor) || 0)/100).toFixed(2)
+                                                            : (parseFloat(formData.comision_valor) || 0).toFixed(2);
+                                                    })()} USD
+                                                </div>
+                                            </div>
+                                            <div className="p-2 bg-white rounded border">
+                                                <div className="text-small text-muted">
+                                                    Ganancia ({formData.ganancia_tipo === 'porcentaje' ? '%' : 'USD'})
+                                                </div>
+                                                <div className="stat-value" style={{ fontSize: '1.1rem' }}>
+                                                    {formData.ganancia_tipo === 'porcentaje' 
+                                                        ? `${(parseFloat(formData.ganancia_valor) || 0).toFixed(2)}%`
+                                                        : `$${(parseFloat(formData.ganancia_valor) || 0).toFixed(2)} USD`
+                                                    }
+                                                </div>
+                                                <div className="text-small text-success mt-1">
+                                                    = ${(() => {
+                                                        const base = parseFloat(convertCurrency(parseFloat(formData.ppf_cop) || 0, 'COP', 'USD') * (1 + (parseFloat(brechaGlobal) || 0)/100));
+                                                        return formData.ganancia_tipo === 'porcentaje'
+                                                            ? (base * (parseFloat(formData.ganancia_valor) || 0)/100).toFixed(2)
+                                                            : (parseFloat(formData.ganancia_valor) || 0).toFixed(2);
+                                                    })()} USD
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Paso 4 */}
+                                <div className="calculation-step mb-3">
+                                    <div className="flex-between items-center mb-2">
+                                        <span className="badge badge-primary">Paso 4</span>
+                                        <span className="text-muted text-small">Suma total</span>
+                                    </div>
+                                    <div className="calculation-box p-3 bg-light rounded">
+                                        <div className="flex-between items-center">
+                                            <div>
+                                                <div className="text-small text-muted">Precio Base</div>
+                                                <div className="stat-value" style={{ fontSize: '1.1rem' }}>
+                                                    ${(parseFloat(convertCurrency(parseFloat(formData.ppf_cop) || 0, 'COP', 'USD') * (1 + (parseFloat(brechaGlobal) || 0)/100)).toFixed(2))}
+                                                </div>
+                                            </div>
+                                            <div className="text-primary mx-3">
+                                                <span style={{ fontSize: '1.5rem' }}>+</span>
+                                            </div>
+                                            <div>
+                                                <div className="text-small text-muted">Comisión</div>
+                                                <div className="stat-value" style={{ fontSize: '1.1rem' }}>
+                                                    ${(() => {
+                                                        const base = parseFloat(convertCurrency(parseFloat(formData.ppf_cop) || 0, 'COP', 'USD') * (1 + (parseFloat(brechaGlobal) || 0)/100));
+                                                        return formData.comision_tipo === 'porcentaje'
+                                                            ? (base * (parseFloat(formData.comision_valor) || 0)/100).toFixed(2)
+                                                            : (parseFloat(formData.comision_valor) || 0).toFixed(2);
+                                                    })()}
+                                                </div>
+                                            </div>
+                                            <div className="text-primary mx-3">
+                                                <span style={{ fontSize: '1.5rem' }}>+</span>
+                                            </div>
+                                            <div>
+                                                <div className="text-small text-muted">Ganancia</div>
+                                                <div className="stat-value" style={{ fontSize: '1.1rem' }}>
+                                                    ${(() => {
+                                                        const base = parseFloat(convertCurrency(parseFloat(formData.ppf_cop) || 0, 'COP', 'USD') * (1 + (parseFloat(brechaGlobal) || 0)/100));
+                                                        return formData.ganancia_tipo === 'porcentaje'
+                                                            ? (base * (parseFloat(formData.ganancia_valor) || 0)/100).toFixed(2)
+                                                            : (parseFloat(formData.ganancia_valor) || 0).toFixed(2);
+                                                    })()}
+                                                </div>
+                                            </div>
+                                            <div className="text-primary mx-3">
+                                                <span style={{ fontSize: '1.5rem' }}>=</span>
+                                            </div>
+                                            <div>
+                                                <div className="text-small text-muted">Precio Contado</div>
+                                                <div className="stat-value text-primary" style={{ fontSize: '1.3rem' }}>
+                                                    ${(formData.precio_usd || 0).toFixed(2)} USD
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Paso 5 */}
+                                <div className="calculation-step">
+                                    <div className="flex-between items-center mb-2">
+                                        <span className="badge badge-success">Paso 5</span>
+                                        <span className="text-muted text-small">Precio a crédito</span>
+                                    </div>
+                                    <div className="calculation-box p-3 bg-light rounded">
+                                        <div className="flex-between items-center">
+                                            <div>
+                                                <div className="text-small text-muted">Precio Contado</div>
+                                                <div className="stat-value" style={{ fontSize: '1.1rem' }}>
+                                                    ${(formData.precio_usd || 0).toFixed(2)}
+                                                </div>
+                                            </div>
+                                            <div className="text-primary mx-3">
+                                                <span style={{ fontSize: '1.5rem' }}>×</span>
+                                            </div>
+                                            <div>
+                                                <div className="text-small text-muted">Factor Crédito ({porcentajeCredito}%)</div>
+                                                <div className="stat-value" style={{ fontSize: '1.1rem' }}>1.{(parseFloat(porcentajeCredito) || 0)/100}</div>
+                                            </div>
+                                            <div className="text-primary mx-3">
+                                                <span style={{ fontSize: '1.5rem' }}>=</span>
+                                            </div>
+                                            <div>
+                                                <div className="text-small text-muted">Precio Crédito</div>
+                                                <div className="stat-value text-success" style={{ fontSize: '1.3rem' }}>
+                                                    ${(formData.precio_credito || 0).toFixed(2)} USD
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Resumen Final */}
+                            <div className="grid grid-2 flex-gap">
+                                <div className="card bg-white p-3 border-primary">
+                                    <div className="text-small text-muted">Precio Final de Contado</div>
+                                    <div className="stat-value text-primary" style={{ fontSize: '1.5rem' }}>
+                                        ${(formData.precio_usd || 0).toFixed(2)} USD
+                                    </div>
+                                </div>
+                                <div className="card bg-white p-3 border-success">
+                                    <div className="text-small text-muted">Precio Final a Crédito (+{porcentajeCredito}%)</div>
+                                    <div className="stat-value text-success" style={{ fontSize: '1.5rem' }}>
+                                        ${(formData.precio_credito || 0).toFixed(2)} USD
+                                    </div>
                                 </div>
                             </div>
                         </div>
