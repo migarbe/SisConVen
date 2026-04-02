@@ -396,7 +396,7 @@ export default function Facturas({ facturas, setFacturas, pedidos, setPedidos, c
 
             // Generar fecha de vencimiento basado en la configuración de días de crédito
             const fechaCreacion = new Date(facturaActual.fecha)
-            const fechaVencimiento = new Date(fechaCreacion.getTime() + (diasCredito * 24 * 60 * 60 * 1000))
+            const fechaVencimiento = diasCredito === 0 ? fechaCreacion : new Date(fechaCreacion.getTime() + (diasCredito * 24 * 60 * 60 * 1000))
 
             const cliente = clientes.find(c => c.id === facturaActualizada.cliente_id)
             const clienteNombre = cliente?.nombre || 'Cliente'
@@ -471,7 +471,7 @@ export default function Facturas({ facturas, setFacturas, pedidos, setPedidos, c
         setFacturaTemporal(nuevaFactura)
 
         // Generar fecha de vencimiento basado en la configuración de días de crédito
-        const fechaVencimiento = new Date(fechaCreacion.getTime() + (diasCredito * 24 * 60 * 60 * 1000))
+        const fechaVencimiento = diasCredito === 0 ? fechaCreacion : new Date(fechaCreacion.getTime() + (diasCredito * 24 * 60 * 60 * 1000))
 
         // Buscar cliente para incluir nombre
         const cliente = clientes.find(c => c.id === nuevaFactura.cliente_id)
@@ -547,7 +547,7 @@ export default function Facturas({ facturas, setFacturas, pedidos, setPedidos, c
         const cliente = clientes.find(c => c.id === factura.cliente_id)
         const clienteNombre = cliente?.nombre || 'Cliente'
         const fechaCreacion = new Date(factura.fecha)
-        const fechaVencimiento = new Date(fechaCreacion.getTime() + (diasCredito * 24 * 60 * 60 * 1000))
+        const fechaVencimiento = diasCredito === 0 ? fechaCreacion : new Date(fechaCreacion.getTime() + (diasCredito * 24 * 60 * 60 * 1000))
 
         const itemsText = factura.items.map(i => {
             const qty = formatNumberVE(i.cantidad, 3)
@@ -914,7 +914,7 @@ export default function Facturas({ facturas, setFacturas, pedidos, setPedidos, c
                     <div className="card p-4">
                         <h3 className="mb-3">Resumen de Factura</h3>
                         <div className="mb-2"><strong>Fecha Emisión:</strong> {formatDateDDMMYYYY(detalleFactura.fecha)}</div>
-                        <div className="mb-2"><strong>Vencimiento:</strong> {formatDateDDMMYYYY(new Date(new Date(detalleFactura.fecha).getTime() + (diasCredito || 15) * 24 * 60 * 60 * 1000))}</div>
+                        <div className="mb-2"><strong>Vencimiento:</strong> {formatDateDDMMYYYY(diasCredito === 0 ? new Date(detalleFactura.fecha) : new Date(new Date(detalleFactura.fecha).getTime() + diasCredito * 24 * 60 * 60 * 1000))}</div>
                         <div className="mb-2">
                             <strong>Estado:</strong>
                             <span className={`badge ml-2 ${detalleFactura.estado === 'Pagada' ? 'badge-success' :
@@ -958,7 +958,7 @@ export default function Facturas({ facturas, setFacturas, pedidos, setPedidos, c
                                 </tr>
                                 {(() => {
                                     let mMora = 0;
-                                    const vDate = new Date(new Date(detalleFactura.fecha).getTime() + (diasCredito * 24 * 60 * 60 * 1000));
+                                    const vDate = diasCredito === 0 ? new Date(detalleFactura.fecha) : new Date(new Date(detalleFactura.fecha).getTime() + (diasCredito * 24 * 60 * 60 * 1000));
                                     const esCreditoD = (detalleFactura.tipo_precio === 'credito' || !detalleFactura.tipo_precio);
 
                                     if (new Date() > vDate && interesMoratorio > 0 && esCreditoD && detalleFactura.estado !== 'Pagada') {
@@ -1124,7 +1124,7 @@ export default function Facturas({ facturas, setFacturas, pedidos, setPedidos, c
                                                 <td>
                                                     {(() => {
                                                         let mMora = 0;
-                                                        const vDate = new Date(new Date(factura.fecha).getTime() + (diasCredito * 24 * 60 * 60 * 1000));
+                                                        const vDate = diasCredito === 0 ? new Date(factura.fecha) : new Date(new Date(factura.fecha).getTime() + (diasCredito * 24 * 60 * 60 * 1000));
                                                         const esCreditoL = (factura.tipo_precio === 'credito' || !factura.tipo_precio);
 
                                                         if (new Date() > vDate && interesMoratorio > 0 && esCreditoL && factura.estado !== 'Pagada') {
