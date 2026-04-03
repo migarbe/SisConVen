@@ -580,6 +580,7 @@ function App() {
                         setDiasCredito={setDiasCredito}
                         interesMoratorio={interesMoratorio}
                         setInteresMoratorio={setInteresMoratorio}
+                        setTasaCambio={setTasaCambio}
                     />
                 )
             case 'vendedores':

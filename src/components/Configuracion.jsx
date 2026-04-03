@@ -1,9 +1,85 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { formatBs } from '../utils/formatters'
-import { Box, Typography, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, InputLabel, Select, MenuItem, FormControl, Grid, Alert, Tooltip, Autocomplete } from '@mui/material'
+import { Box, Typography, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, InputLabel, Select, MenuItem, FormControl, Grid, Tooltip, Autocomplete, Snackbar, Alert as MuiAlert } from '@mui/material'
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, Save as SaveIcon, Cancel as CancelIcon, Print as PrintIcon, AttachMoney as AttachMoneyIcon } from '@mui/icons-material'
+import { setPreferredRateSource, getPreferredRateSource, getUsdToVesRate, fetchRatesFromBcvUrl } from '../utils/exchangeRateService'
 
-export default function Configuracion({ settings, setSettings, brecha, setBrecha, brechaBase, porcentajeCredito, setPorcentajeCredito, diasCredito, setDiasCredito, interesMoratorio, setInteresMoratorio }) {
+export default function Configuracion({ settings, setSettings, brecha, setBrecha, brechaBase, porcentajeCredito, setPorcentajeCredito, diasCredito, setDiasCredito, interesMoratorio, setInteresMoratorio, setTasaCambio }) {
+
+    const [preferredSource, setPreferredSource] = useState('api')
+    const [bcvUrl, setBcvUrl] = useState('https://agroflorca.ddns.net/sisconven/tasa_bcv.json')
+    const [useProxy, setUseProxy] = useState(false)
+    const [rateStatus, setRateStatus] = useState('')
+    const [toastOpen, setToastOpen] = useState(false)
+    const [toastMsg, setToastMsg] = useState('')
+    const [toastSeverity, setToastSeverity] = useState('info')
+
+    const showToast = (msg, severity = 'info', duration = 4000) => {
+        setToastMsg(msg)
+        setToastSeverity(severity)
+        setToastOpen(true)
+        setTimeout(() => setToastOpen(false), duration)
+    }
+
+    useEffect(() => {
+        try {
+            const p = getPreferredRateSource()
+            if (p && p.type) {
+                setPreferredSource(p.type)
+                if (p.url) setBcvUrl(p.url)
+                if (p.useProxy) setUseProxy(!!p.useProxy)
+            }
+        } catch (err) {
+            console.warn('Could not load preferred rate source:', err)
+        }
+    }, [])
+
+    const handleSaveRateSource = async () => {
+        try {
+            setRateStatus('Guardando...')
+                // setRateStatus('Guardando...')
+                showToast('Guardando...', 'info', 2000)
+
+            // If BCV selected, first attempt to fetch and parse the JSON at the provided URL
+            if (preferredSource === 'bcv') {
+                try {
+                    const rate = await fetchRatesFromBcvUrl(bcvUrl, useProxy)
+                    // Save preference only after successful parse
+                    setPreferredRateSource({ type: 'bcv', url: bcvUrl, useProxy })
+                    const formatted = Number(parseFloat(rate).toFixed(2))
+                    setRateStatus(`Tasa BCV: ${formatted.toFixed(2)} • OK`)
+                        showToast(`Tasa BCV: ${formatted.toFixed(2)} • OK`, 'success', 5000)
+                    if (typeof setTasaCambio === 'function') setTasaCambio(formatted)
+                    setTimeout(() => setRateStatus(''), 5000)
+                    return
+                } catch (err) {
+                    console.error('Error fetching/parsing BCV URL:', err)
+                    // Provide clearer hint about CORS
+                    const msg = err.message && err.message.toLowerCase().includes('failed to fetch')
+                        ? 'Error al obtener el archivo (posible CORS o red). Puedes activar un proxy CORS en el servidor o usar la Fuente API.'
+                        : `Error al obtener tasa BCV: ${err.message}`
+                    setRateStatus(msg)
+                        showToast(msg.includes('CORS') ? msg : `Error: ${msg}`, msg.includes('CORS') ? 'warning' : 'error', 7000)
+                    setTimeout(() => setRateStatus(''), 7000)
+                    return
+                }
+            }
+
+            // Otherwise (API selected) just save preference
+            setPreferredRateSource({ type: preferredSource, url: bcvUrl, useProxy })
+            const newRate = await getUsdToVesRate()
+            const formattedNew = Number(parseFloat(newRate).toFixed(2))
+            setRateStatus(`Fuente API aplicada: ${formattedNew.toFixed(2)}`)
+                showToast(`Fuente API aplicada: ${formattedNew.toFixed(2)}`, 'success', 4000)
+            try { if (typeof setTasaCambio === 'function') setTasaCambio(formattedNew) } catch (e) { /* ignore */ }
+            setTimeout(() => setRateStatus(''), 4000)
+        } catch (err) {
+            console.error('Error saving rate source:', err)
+            setRateStatus('Error al aplicar la fuente; inténtalo nuevamente.')
+                showToast('Error al aplicar la fuente; inténtalo nuevamente.', 'error', 4000)
+            setTimeout(() => setRateStatus(''), 4000)
+        }
+    }
 
     // Calcular la brecha total: base (del dólar paralelo) + adicional del usuario
     const brechaTotal = brechaBase + brecha
@@ -68,6 +144,48 @@ export default function Configuracion({ settings, setSettings, brecha, setBrecha
                     )}
 
                     <div className="grid grid-3 flex-gap">
+                        <div className="form-group">
+                            <label className="form-label">Fuente de la tasa</label>
+                            <p className="text-small text-muted mb-2">Elige la fuente para convertir USD→VES usada en facturas y reportes.</p>
+                            <div className="flex flex-gap mt-2">
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <input type="radio" name="rate_source" value="api" checked={preferredSource==='api'} onChange={() => setPreferredSource('api')} /> API (DolarAPI)
+                                </label>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '12px' }}>
+                                    <input type="radio" name="rate_source" value="bcv" checked={preferredSource==='bcv'} onChange={() => setPreferredSource('bcv')} /> BCV JSON
+                                </label>
+                            </div>
+                            {preferredSource === 'bcv' && (
+                                <div style={{ marginTop: '8px' }}>
+                                    <input type="text" className="form-input" value={bcvUrl} onChange={(e) => setBcvUrl(e.target.value)} />
+                                    <p className="text-small text-muted mt-1">URL del JSON que devuelve la tasa BCV (editable).</p>
+                                    <div style={{ marginTop: '8px' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <input type="checkbox" checked={useProxy} onChange={(e) => setUseProxy(e.target.checked)} /> Forzar uso de proxy CORS (AllOrigins)
+                                        </label>
+                                        <div style={{ marginTop: '6px' }}>
+                                            <button type="button" className="btn btn-secondary" onClick={async () => {
+                                
+                                                try {
+                                                    await navigator.clipboard.writeText(curl)
+                                                        // setRateStatus('Comando curl copiado al portapapeles')
+                                                        showToast('Comando curl copiado al portapapeles', 'info', 2500)
+                                                        setTimeout(() => setRateStatus(''), 2500)
+                                                } catch (err) {
+                                                    // setRateStatus('No se pudo copiar el comando curl')
+                                                    showToast('No se pudo copiar el comando curl', 'error', 2500)
+                                                    setTimeout(() => setRateStatus(''), 2500)
+                                                }
+                                            }}>Copiar comando curl</button>
+                                            <span style={{ marginLeft: '8px' }} className="text-small text-muted">(útil para probar desde terminal)</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            <div style={{ marginTop: '8px' }}>
+                                <button type="button" className="btn btn-primary" onClick={handleSaveRateSource}>Guardar Fuente</button>
+                            </div>
+                        </div>
                         <div className="form-group">
                             <label className="form-label">Incremento de Brecha</label>
                             <p className="text-small text-muted mb-2">Porcentaje adicional sobre la brecha del dólar paralelo.</p>
@@ -230,6 +348,11 @@ export default function Configuracion({ settings, setSettings, brecha, setBrecha
                     </div>
                 </div>
             </div>
+                <Snackbar open={toastOpen} autoHideDuration={4000} onClose={() => setToastOpen(false)} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+                    <MuiAlert onClose={() => setToastOpen(false)} severity={toastSeverity} sx={{ width: '100%' }}>
+                        {toastMsg}
+                    </MuiAlert>
+                </Snackbar>
         </div>
     )
 }

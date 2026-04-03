@@ -167,10 +167,11 @@ export const imprimirTicketFactura = (factura, cliente, config) => {
         <div class="divider"></div>
 
         <div class="text-center" style="margin-top: 15px;">
-            <div>Tasa de cambio: Bs. ${formatNumberVE(tasaCambio, 2)}</div>
-            <div style="margin-top: 10px;">¡Gracias por su compra!</div>
-            <div>--------------------------</div>
-        </div>
+                <div>Tasa de cambio: Bs. ${formatNumberVE(tasaCambio, 2)}</div>
+                ${config && config.rateSource ? `<div>Fuente: ${config.rateSource}</div>` : ''}
+                <div style="margin-top: 10px;">¡Gracias por su compra!</div>
+                <div>--------------------------</div>
+            </div>
 
         <script>
             window.onload = function() {

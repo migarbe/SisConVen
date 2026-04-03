@@ -887,7 +887,7 @@ export default function Facturas({ facturas, setFacturas, pedidos, setPedidos, c
                     <div className="flex flex-gap">
                         <button className="btn btn-secondary" onClick={() => {
                             const cliente = clientes.find(c => c.id === detalleFactura.cliente_id)
-                            imprimirTicketFactura(detalleFactura, cliente, { tasaCambio, diasCredito, interesMoratorio })
+                            imprimirTicketFactura(detalleFactura, cliente, { tasaCambio, diasCredito, interesMoratorio, rateSource: (typeof window !== 'undefined' && localStorage.getItem ? (JSON.parse(localStorage.getItem('sisconven_rate_source')||'null')?.type === 'bcv' ? 'BCV_JSON' : 'DolarAPI') : 'DolarAPI') })
                         }}>
                             🖨️ Imprimir
                         </button>
@@ -1165,7 +1165,7 @@ export default function Facturas({ facturas, setFacturas, pedidos, setPedidos, c
                                                         )}
                                                         <button className="btn btn-sm btn-secondary" onClick={() => {
                                                             const cliente = clientes.find(c => c.id === factura.cliente_id)
-                                                            imprimirTicketFactura(factura, cliente, { tasaCambio, diasCredito, interesMoratorio })
+                                                            imprimirTicketFactura(factura, cliente, { tasaCambio, diasCredito, interesMoratorio, rateSource: (typeof window !== 'undefined' && localStorage.getItem ? (JSON.parse(localStorage.getItem('sisconven_rate_source')||'null')?.type === 'bcv' ? 'BCV_JSON' : 'DolarAPI') : 'DolarAPI') })
                                                         }} title="Imprimir Ticket">🖨️</button>
                                                         <button className="btn btn-sm btn-secondary" onClick={() => handleVerFactura(factura)}>Ver</button>
                                                         {factura.estado !== 'Pagada' && (
@@ -1237,7 +1237,7 @@ export default function Facturas({ facturas, setFacturas, pedidos, setPedidos, c
                                         style={{ flex: 1 }} 
                                         onClick={() => {
                                             const cliente = clientes.find(c => c.id === facturaTemporal.cliente_id)
-                                            imprimirTicketFactura(facturaTemporal, cliente, { tasaCambio, diasCredito, interesMoratorio })
+                                            imprimirTicketFactura(facturaTemporal, cliente, { tasaCambio, diasCredito, interesMoratorio, rateSource: (typeof window !== 'undefined' && localStorage.getItem ? (JSON.parse(localStorage.getItem('sisconven_rate_source')||'null')?.type === 'bcv' ? 'BCV_JSON' : 'DolarAPI') : 'DolarAPI') })
                                         }}
                                     >
                                         🖨️ Imprimir Ticket

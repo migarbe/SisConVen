@@ -10,6 +10,8 @@ const HISTORY_KEY = 'exchangeRatesHistory';
 const MAX_HISTORY_DAYS = 90; // Keep up to 90 days of history
 const CURRENCIES = ['USD', 'EUR', 'COP', 'VES'];
 
+const PREFERRED_RATE_KEY = 'sisconven_rate_source';
+
 // State
 let cachedRates = null;
 let lastUpdate = null;
@@ -22,6 +24,10 @@ let apiStatus = null; // Estado de la API
 
 let rateSource = 'DolarAPI'; // Current source
 let fechaActualizacion = null;
+let preferredRateSource = { type: 'api', useProxy: false } // { type: 'api'|'bcv', url?: string, useProxy?: boolean }
+
+// Cache for BCV URL fetches
+let lastBcvFetch = { timestamp: 0, rate: null };
 
 /**
  * Fetch exchange rates from DolarAPI
@@ -152,6 +158,180 @@ export async function fetchExchangeRates() {
         loadRatesFromCache();
         throw error;
     }
+}
+
+/**
+ * Load preferred rate source from localStorage
+ */
+function loadPreferredRateSource() {
+    try {
+        const saved = localStorage.getItem(PREFERRED_RATE_KEY)
+        if (saved) {
+            const parsed = JSON.parse(saved)
+            preferredRateSource = { ...preferredRateSource, ...parsed }
+        }
+    } catch (err) {
+        console.warn('Error loading preferred rate source:', err)
+    }
+}
+
+/**
+ * Save preferred rate source to localStorage
+ */
+function savePreferredRateSource() {
+    try {
+        localStorage.setItem(PREFERRED_RATE_KEY, JSON.stringify(preferredRateSource))
+    } catch (err) {
+        console.error('Error saving preferred rate source:', err)
+    }
+}
+
+/**
+ * Set user preferred rate source
+ * @param {{type: 'api'|'bcv', url?: string}} src
+ */
+export function setPreferredRateSource(src) {
+    if (!src || !src.type) return
+    preferredRateSource = { type: src.type, url: src.url, useProxy: !!src.useProxy }
+    savePreferredRateSource()
+}
+
+/**
+ * Get user preferred rate source
+ */
+export function getPreferredRateSource() {
+    return preferredRateSource
+}
+
+/**
+ * Fetch and parse a rate number from a BCV-style JSON URL.
+ * Accepts several schemas: number, object with venta/promedio/rate/tasa, or array of such objects.
+ */
+export async function fetchRatesFromBcvUrl(url, forceProxy = false) {
+    if (!url) throw new Error('No URL provided')
+
+    // Use cached result if recent (<5 minutes)
+    const now = Date.now()
+    if (lastBcvFetch.timestamp && (now - lastBcvFetch.timestamp) < (5 * 60 * 1000) && lastBcvFetch.rate) {
+        return lastBcvFetch.rate
+    }
+
+    let data = null
+    const preferProxy = forceProxy || preferredRateSource?.useProxy
+    // If preferProxy is true, try proxy first (useful to bypass CORS)
+    if (preferProxy) {
+        try {
+            const proxy = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url)
+            const resp = await fetch(proxy)
+            if (!resp.ok) throw new Error(`Proxy request failed: ${resp.status}`)
+            data = await resp.json()
+        } catch (proxyErr) {
+            // Try direct as fallback
+            try {
+                const resp = await fetch(url)
+                if (!resp.ok) throw new Error(`BCV URL request failed: ${resp.status}`)
+                data = await resp.json()
+            } catch (directErr) {
+                throw new Error(proxyErr.message || directErr.message)
+            }
+        }
+    } else {
+        // Try direct fetch first
+        try {
+            const resp = await fetch(url)
+            if (!resp.ok) throw new Error(`BCV URL request failed: ${resp.status}`)
+            data = await resp.json()
+        } catch (directErr) {
+            // If direct fetch fails (often due to CORS), try a public CORS proxy as fallback
+            try {
+                const proxy = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url)
+                const resp = await fetch(proxy)
+                if (!resp.ok) throw new Error(`Proxy request failed: ${resp.status}`)
+                data = await resp.json()
+            } catch (proxyErr) {
+                // Throw original direct error for clearer message
+                throw new Error(directErr.message || proxyErr.message)
+            }
+        }
+    }
+
+    // Helper to parse object for known fields
+    const parseObject = (obj) => {
+        if (obj == null) return null
+        if (typeof obj === 'number') return obj
+        if (typeof obj === 'string' && !isNaN(parseFloat(obj))) return parseFloat(obj)
+        const keys = ['venta', 'promedio', 'prom', 'rate', 'tasa', 'precio', 'price']
+        for (const k of keys) {
+            if (obj[k] !== undefined && obj[k] !== null) {
+                const v = obj[k]
+                if (typeof v === 'number') return v
+                if (typeof v === 'string' && !isNaN(parseFloat(v))) return parseFloat(v)
+            }
+        }
+        return null
+    }
+
+    let rate = null
+
+    if (Array.isArray(data)) {
+        for (const el of data) {
+            rate = parseObject(el)
+            if (rate) break
+            // maybe nested
+            if (el && typeof el === 'object') {
+                for (const k of Object.keys(el)) {
+                    rate = parseObject(el[k])
+                    if (rate) break
+                }
+            }
+            if (rate) break
+        }
+    } else if (typeof data === 'object') {
+        rate = parseObject(data)
+        if (!rate) {
+            // Try searching nested properties
+            for (const k of Object.keys(data)) {
+                rate = parseObject(data[k])
+                if (rate) break
+            }
+        }
+    } else if (typeof data === 'number') {
+        rate = data
+    } else if (typeof data === 'string' && !isNaN(parseFloat(data))) {
+        rate = parseFloat(data)
+    }
+
+    if (!rate) throw new Error('Could not parse rate from BCV URL response')
+
+    // Round to 2 decimals when coming from BCV JSON
+    const rounded = Number(parseFloat(rate).toFixed(2))
+    lastBcvFetch = { timestamp: now, rate: rounded }
+    return rounded
+}
+
+/**
+ * Return the USD -> VES rate according to user preference.
+ * Falls back to DolarAPI if BCV URL fails.
+ */
+export async function getSelectedUsdToVesRate() {
+    loadPreferredRateSource()
+    if (preferredRateSource.type === 'bcv' && preferredRateSource.url) {
+        try {
+            const r = await fetchRatesFromBcvUrl(preferredRateSource.url)
+            // store some metadata
+            rateSource = 'BCV_JSON'
+            fechaActualizacion = new Date().toLocaleString('es-VE')
+            return r
+        } catch (err) {
+            console.warn('Failed to fetch BCV URL, falling back to API:', err)
+            // fallthrough to API
+        }
+    }
+
+    // Default: use existing DolarAPI logic
+    const rates = await getExchangeRates()
+    if (rates && rates.VES) return Number(parseFloat(rates.VES).toFixed(2))
+    return 50
 }
 
 /**
@@ -376,15 +556,18 @@ export function convertCurrency(amount, from, to) {
  */
 export async function getUsdToVesRate() {
     try {
-        const rates = await getExchangeRates();
-        if (rates && rates.VES) {
-            return rates.VES;
-        }
-        // Fallback to cached or default
-        return 50; // Default fallback
+        // Prefer the user-selected source (BCV JSON or API)
+        return await getSelectedUsdToVesRate()
     } catch (error) {
-        console.error('Error getting USD to VES rate:', error);
-        return 50; // Default fallback
+        console.error('Error getting USD to VES rate (selected):', error);
+        // Fallback to original behavior
+        try {
+            const rates = await getExchangeRates();
+            if (rates && rates.VES) return rates.VES;
+        } catch (e) {
+            console.warn('Fallback getExchangeRates failed:', e);
+        }
+        return 50;
     }
 }
 
@@ -586,7 +769,9 @@ function getDefaultRates() {
  * Initialize the service (load from cache on startup)
  */
 export function initExchangeRateService() {
+    // Load cached rates and preferred source
     loadRatesFromCache();
+    loadPreferredRateSource();
     // Fetch fresh rates in background
     fetchExchangeRates().catch(err => {
         console.warn('Could not fetch initial rates, using cache:', err);
