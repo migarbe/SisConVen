@@ -110,6 +110,10 @@ export default function Mensajeria({ clientes, facturas, tasaCambio, productos =
             texto += '*Banco:* 0105 - Banco Mercantil C.A.\n'
             texto += '*Teléfono:* (0422) 769-3572\n'
             texto += '*C.I:* V-13097345\n\n'
+            texto += '*Pagos en Divisas*\n'
+            texto += '*Zelle:* migarbe@gmail.com (Solo si eres titular)\n'
+            texto += '*Binance:* 192364253 (USDt)\n'
+            texto += '*USDt Wallet:* 0xfCa6BdC7A903230B5A442a03f7be7E45C6bfcC28 (USDt/Ethereum)\n\n'
             texto += 'Por favor confirme su pago enviando su comprobante de pago por este medio.'
         }
 
