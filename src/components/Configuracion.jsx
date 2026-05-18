@@ -46,7 +46,8 @@ export default function Configuracion({ settings, setSettings, brecha, setBrecha
                     const rate = await fetchRatesFromBcvUrl(bcvUrl, useProxy)
                     // Save preference only after successful parse
                     setPreferredRateSource({ type: 'bcv', url: bcvUrl, useProxy })
-                    const formatted = Number(parseFloat(rate).toFixed(2))
+                    const parsedRate = parseFloat(rate)
+                    const formatted = Math.floor(parsedRate * 100) / 100
                     setRateStatus(`Tasa BCV: ${formatted.toFixed(2)} • OK`)
                         showToast(`Tasa BCV: ${formatted.toFixed(2)} • OK`, 'success', 5000)
                     if (typeof setTasaCambio === 'function') setTasaCambio(formatted)

@@ -9,6 +9,7 @@ export default function Clientes({ clientes, setClientes, externalEditCliente, s
     const [formData, setFormData] = useState({
         nombre: '',
         telefono: '',
+        rif: '',
         direccion: '',
         permite_credito: false
     })
@@ -46,7 +47,7 @@ export default function Clientes({ clientes, setClientes, externalEditCliente, s
         }
 
         // Resetear formulario
-        setFormData({ nombre: '', telefono: '', direccion: '', permite_credito: false })
+        setFormData({ nombre: '', telefono: '', rif: '', direccion: '', permite_credito: false })
         setVistaActiva('lista')
     }
 
@@ -54,6 +55,7 @@ export default function Clientes({ clientes, setClientes, externalEditCliente, s
         setFormData({
             nombre: cliente.nombre,
             telefono: cliente.telefono,
+            rif: cliente.rif || cliente.cedula || '',
             direccion: cliente.direccion,
             permite_credito: cliente.permite_credito !== undefined ? cliente.permite_credito : true
         })
@@ -67,6 +69,7 @@ export default function Clientes({ clientes, setClientes, externalEditCliente, s
             setFormData({
                 nombre: externalEditCliente.nombre || '',
                 telefono: externalEditCliente.telefono || '',
+                rif: externalEditCliente.rif || externalEditCliente.cedula || '',
                 direccion: externalEditCliente.direccion || '',
                 permite_credito: externalEditCliente.permite_credito !== undefined ? externalEditCliente.permite_credito : true
             })
@@ -85,7 +88,7 @@ export default function Clientes({ clientes, setClientes, externalEditCliente, s
     }
 
     const handleCancelar = () => {
-        setFormData({ nombre: '', telefono: '', direccion: '', permite_credito: false })
+        setFormData({ nombre: '', telefono: '', rif: '', direccion: '', permite_credito: false })
         setEditando(null)
         setVistaActiva('lista')
     }
@@ -289,6 +292,16 @@ export default function Clientes({ clientes, setClientes, externalEditCliente, s
                         </div>
 
                         <div className="form-group">
+                            <label className="form-label">R.I.F</label>
+                            <input
+                                type="text"
+                                className="form-input"
+                                value={formData.rif}
+                                onChange={(e) => setFormData({ ...formData, rif: e.target.value })}
+                            />
+                        </div>
+
+                        <div className="form-group">
                             <label className="form-label">Dirección *</label>
                             <textarea
                                 className="form-textarea"
@@ -464,7 +477,7 @@ export default function Clientes({ clientes, setClientes, externalEditCliente, s
                     </div>
                     <button
                         className="btn btn-primary"
-                        onClick={() => { setEditando(null); setFormData({ nombre: '', telefono: '', direccion: '', permite_credito: false }); setVistaActiva('formulario') }}
+                        onClick={() => { setEditando(null); setFormData({ nombre: '', telefono: '', rif: '', direccion: '', permite_credito: false }); setVistaActiva('formulario') }}
                     >
                         + Nuevo Cliente
                     </button>

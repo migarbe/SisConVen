@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { formatPhoneForDisplay, formatBs } from '../utils/formatters'
 import { Box, Typography, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, InputLabel, Select, MenuItem, FormControl, Grid, Alert, Tooltip, Autocomplete } from '@mui/material'
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, Save as SaveIcon, Cancel as CancelIcon, Print as PrintIcon, AttachMoney as AttachMoneyIcon } from '@mui/icons-material'
-import { imprimirTicketFactura } from '../utils/printer'
+import { imprimirNotaEntrega } from '../utils/printer'
 
 export default function Facturas({ facturas, setFacturas, pedidos, setPedidos, clientes, productos, setProductos, openClienteEditor, tasaCambio, vendedores, pedidoAConvertir, setPedidoAConvertir, facturaADetalle, setFacturaADetalle, onPagarFactura, porcentajeCredito, diasCredito = 15, interesMoratorio = 0 }) {
     const [idPedidoOrigen, setIdPedidoOrigen] = useState(null)
@@ -113,6 +113,9 @@ export default function Facturas({ facturas, setFacturas, pedidos, setPedidos, c
     // Estados para gestión de búsqueda y ordenación
     const [searchTerm, setSearchTerm] = useState('')
     const [sortConfig, setSortConfig] = useState({ key: 'fecha', direction: 'desc' })
+    const [openPrintDialog, setOpenPrintDialog] = useState(false)
+    const [selectedPrintFormat, setSelectedPrintFormat] = useState('a4')
+    const [printFactura, setPrintFactura] = useState(null)
 
     const handleSort = (key) => {
         let direction = 'asc'
@@ -120,6 +123,31 @@ export default function Facturas({ facturas, setFacturas, pedidos, setPedidos, c
             direction = 'desc'
         }
         setSortConfig({ key, direction })
+    }
+
+    const getPrintConfig = () => ({
+        tasaCambio,
+        diasCredito,
+        interesMoratorio,
+        rateSource: (typeof window !== 'undefined' && localStorage.getItem ? (JSON.parse(localStorage.getItem('sisconven_rate_source')||'null')?.type === 'bcv' ? 'BCV_JSON' : 'DolarAPI') : 'DolarAPI')
+    })
+
+    const openPrintFormatDialog = (factura) => {
+        setPrintFactura(factura)
+        setSelectedPrintFormat('a4')
+        setOpenPrintDialog(true)
+    }
+
+    const closePrintFormatDialog = () => {
+        setOpenPrintDialog(false)
+        setPrintFactura(null)
+    }
+
+    const handleImprimirNotaEntrega = () => {
+        if (!printFactura) return
+        const cliente = clientes.find(c => c.id === printFactura.cliente_id)
+        imprimirNotaEntrega(printFactura, cliente, getPrintConfig(), selectedPrintFormat)
+        closePrintFormatDialog()
     }
 
     const facturasFiltradasYOrdenadas = [...facturas]
@@ -885,10 +913,7 @@ export default function Facturas({ facturas, setFacturas, pedidos, setPedidos, c
                         <h1 className="page-title">Detalle de Factura #{detalleFactura.id}</h1>
                     </div>
                     <div className="flex flex-gap">
-                        <button className="btn btn-secondary" onClick={() => {
-                            const cliente = clientes.find(c => c.id === detalleFactura.cliente_id)
-                            imprimirTicketFactura(detalleFactura, cliente, { tasaCambio, diasCredito, interesMoratorio, rateSource: (typeof window !== 'undefined' && localStorage.getItem ? (JSON.parse(localStorage.getItem('sisconven_rate_source')||'null')?.type === 'bcv' ? 'BCV_JSON' : 'DolarAPI') : 'DolarAPI') })
-                        }}>
+                        <button className="btn btn-secondary" onClick={() => openPrintFormatDialog(detalleFactura)}>
                             🖨️ Imprimir
                         </button>
                         {detalleFactura.estado !== 'Pagada' && (
@@ -1163,10 +1188,7 @@ export default function Facturas({ facturas, setFacturas, pedidos, setPedidos, c
                                                                 <button className="btn btn-sm btn-primary" onClick={() => generarMensajeCobro(factura)}>Mensaje Cobro</button>
                                                             </>
                                                         )}
-                                                        <button className="btn btn-sm btn-secondary" onClick={() => {
-                                                            const cliente = clientes.find(c => c.id === factura.cliente_id)
-                                                            imprimirTicketFactura(factura, cliente, { tasaCambio, diasCredito, interesMoratorio, rateSource: (typeof window !== 'undefined' && localStorage.getItem ? (JSON.parse(localStorage.getItem('sisconven_rate_source')||'null')?.type === 'bcv' ? 'BCV_JSON' : 'DolarAPI') : 'DolarAPI') })
-                                                        }} title="Imprimir Ticket">🖨️</button>
+                                                        <button className="btn btn-sm btn-secondary" onClick={() => openPrintFormatDialog(factura)} title="Imprimir Ticket">🖨️</button>
                                                         <button className="btn btn-sm btn-secondary" onClick={() => handleVerFactura(factura)}>Ver</button>
                                                         {factura.estado !== 'Pagada' && (
                                                             <button className="btn btn-sm btn-secondary" onClick={() => handleEditarFactura(factura)}>Editar</button>
@@ -1189,6 +1211,27 @@ export default function Facturas({ facturas, setFacturas, pedidos, setPedidos, c
     return (
         <div className="slide-up">
             {vistaContenido}
+
+            <Dialog open={openPrintDialog} onClose={closePrintFormatDialog}>
+                <DialogTitle>Formato de impresión</DialogTitle>
+                <DialogContent>
+                    <FormControl fullWidth variant="standard" style={{ minWidth: 200 }}>
+                        <InputLabel id="print-format-label">Formato</InputLabel>
+                        <Select
+                            labelId="print-format-label"
+                            value={selectedPrintFormat}
+                            onChange={(e) => setSelectedPrintFormat(e.target.value)}
+                        >
+                            <MenuItem value="a4">A4</MenuItem>
+                            <MenuItem value="ticket">Ticket</MenuItem>
+                        </Select>
+                    </FormControl>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={closePrintFormatDialog}>Cancelar</Button>
+                    <Button onClick={handleImprimirNotaEntrega} variant="contained">Imprimir</Button>
+                </DialogActions>
+            </Dialog>
 
             {/* WhatsApp Message Modal - Shared across all views */}
             {whatsappMessage && (
@@ -1235,10 +1278,7 @@ export default function Facturas({ facturas, setFacturas, pedidos, setPedidos, c
                                         type="button" 
                                         className="btn btn-secondary" 
                                         style={{ flex: 1 }} 
-                                        onClick={() => {
-                                            const cliente = clientes.find(c => c.id === facturaTemporal.cliente_id)
-                                            imprimirTicketFactura(facturaTemporal, cliente, { tasaCambio, diasCredito, interesMoratorio, rateSource: (typeof window !== 'undefined' && localStorage.getItem ? (JSON.parse(localStorage.getItem('sisconven_rate_source')||'null')?.type === 'bcv' ? 'BCV_JSON' : 'DolarAPI') : 'DolarAPI') })
-                                        }}
+                                        onClick={() => openPrintFormatDialog(facturaTemporal)}
                                     >
                                         🖨️ Imprimir Ticket
                                     </button>
