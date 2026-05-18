@@ -652,7 +652,7 @@ function App() {
                             <MenuIcon />
                         </IconButton>
                         <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-                            SISCONVEN 2026
+                            AGROFLOR C.A. 2026
                         </Typography>
                         <FormControlLabel
                             control={

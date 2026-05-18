@@ -43,10 +43,10 @@ export const VARIABLES = {
  * Configuración de la empresa (puede ser cargada desde localStorage o configuración)
  */
 const EMPRESA_CONFIG = {
-    nombre: 'SISCONVEN 2026',
+    nombre: 'Agropecuaria La Florida C.A.',
     telefono: '(0422) 769-3572',
     banco: '0105 - Banco Mercantil C.A.',
-    direccion: 'Dirección Comercial',
+    direccion: 'Edificio General Massini, Piso 6, Oficina 6-A, Mérida, Venezuela',
     dias_credito: 7
 }
 
